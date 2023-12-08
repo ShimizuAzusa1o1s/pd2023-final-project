@@ -1,0 +1,23 @@
+#pragma once
+#include <iostream>
+#include <SDL2/SDL.h>
+
+class Game{
+    private:
+        bool isRunning; //Indicator of the game-running status.
+        SDL_Window* window;
+    public:
+        //Static member variables.
+        static SDL_Renderer* renderer;
+        //Constructors.
+        Game();
+        //Destructor.
+        ~Game();
+        //Member functions.
+        void initialize( const char* title, int xpos, int ypos, int width, int height, bool fullScreen );
+        void handleEvents();
+        void update();
+        void render();
+        void clean();
+        bool running();
+};
