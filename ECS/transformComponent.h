@@ -1,5 +1,5 @@
 #pragma once
-#include "component.h"
+#include "components.h"
 #include "..\vector2D.h"
 
 //Component used to record the entity's position.
@@ -7,7 +7,9 @@ class TransformComponent : public Component
 {
     public:
         Vector2D position;
-        
+        Vector2D velocity;
+        int speed = 3;
+
         TransformComponent(){
             this->position.x = 0;
             this->position.y = 0;
@@ -18,8 +20,14 @@ class TransformComponent : public Component
             this->position.y = y;
         }
 
+        void init() override{
+            velocity.x = 0;
+            velocity.y = 0;
+        }
+
         void update() override{
-            
+            position.x += velocity.x * speed;
+            position.y += velocity.y * speed;
         }
 
 };

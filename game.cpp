@@ -1,17 +1,15 @@
 #include "game.h"
 #include "textureManager.h"
-#include "textureManager.cpp"
 #include "map.h"
-#include "map.cpp"
-#include "ECS/component.h"
+#include "ECS/components.h"
 #include "vector2D.h"
-#include "vector2D.cpp"
 
 //Map object declaration.
 Map* map;
 
 //Texture manager declaration.
 SDL_Renderer* Game::renderer = nullptr;
+SDL_Event Game::event;
 
 //Entity component system manager declaration.
 Manager manager;
@@ -44,7 +42,7 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         //Add components to the ECS manager.
         player.addComponent< TransformComponent >();
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
-
+        player.addComponent< KeyboardController >();
         this->isRunning = true;
     }
     //If the game cannot be opened correctly, stop.
@@ -54,7 +52,6 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
 //Handling game events happening in the game.
 void Game::handleEvents(){
     //Obtain access to the given events. 
-    SDL_Event event;
     SDL_PollEvent( &event );
 
     //Operating given events depending on its type.
@@ -71,11 +68,6 @@ void Game::handleEvents(){
 void Game::update(){
     manager.refresh();
     manager.update();
-    player.getComponent< TransformComponent >().position.add( Vector2D( 4, 3 ) );
-
-    if( player.getComponent< TransformComponent >().position.x > 100 ){
-        player.getComponent< SpriteComponent >().setTexture( "assets/WhiteCross.bmp" );
-    }
 }
 
 //Update the game screen in accordance with the game entities.

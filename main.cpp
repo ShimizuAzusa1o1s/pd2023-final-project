@@ -1,5 +1,8 @@
 #include "game.h"
 #include "game.cpp"
+#include "textureManager.cpp"
+#include "map.cpp"
+#include "vector2D.cpp"
 
 //Controling max frame rate.
 const int FPS = 60;

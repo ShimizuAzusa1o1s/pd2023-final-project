@@ -9,6 +9,7 @@ class Game{
     public:
         //Static member variables.
         static SDL_Renderer* renderer;
+        static SDL_Event event;
         //Constructors.
         Game();
         //Destructor.
