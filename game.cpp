@@ -3,6 +3,7 @@
 #include "map.h"
 #include "ECS/components.h"
 #include "vector2D.h"
+#include "ECS/collision.h"
 
 //Map object declaration.
 Map* map;
@@ -14,6 +15,7 @@ SDL_Event Game::event;
 //Entity component system manager declaration.
 Manager manager;
 auto& player( manager.addEntity() );
+auto& wall( manager.addEntity() );
 
 Game::Game(){}
 
@@ -43,6 +45,12 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         player.addComponent< TransformComponent >();
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
         player.addComponent< KeyboardController >();
+        player.addComponent< ColliderComponent >( "player" );
+
+        wall.addComponent< TransformComponent >( 300, 500, 300, 20, 1 );
+        wall.addComponent< SpriteComponent >( "assets/Wall.bmp" );
+        wall.addComponent< ColliderComponent >( "wall" );
+
         this->isRunning = true;
     }
     //If the game cannot be opened correctly, stop.
@@ -68,6 +76,11 @@ void Game::handleEvents(){
 void Game::update(){
     manager.refresh();
     manager.update();
+    if( Collision::AABB( player.getComponent< ColliderComponent >().collider,
+                        wall.getComponent< ColliderComponent >().collider ) ){
+        player.getComponent< TransformComponent >().scale = 1;
+        std::cout << "Wall hit!" << std::endl;
+    }
 }
 
 //Update the game screen in accordance with the game entities.

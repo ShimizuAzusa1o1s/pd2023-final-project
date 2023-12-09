@@ -3,6 +3,7 @@
 #include "textureManager.cpp"
 #include "map.cpp"
 #include "vector2D.cpp"
+#include "ECS/collision.cpp"
 
 //Controling max frame rate.
 const int FPS = 60;
