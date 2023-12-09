@@ -16,13 +16,11 @@ class TransformComponent : public Component
         int speed = 3;
 
         TransformComponent(){
-            this->position.x = 0;
-            this->position.y = 0;
+            this->position.zero();
         }
 
         TransformComponent( int sc ){
-            this->position.x = 0;
-            this->position.y = 0;
+            this->position.zero();
             this->scale = sc;
         }
         
@@ -40,8 +38,7 @@ class TransformComponent : public Component
         }
 
         void init() override{
-            velocity.x = 0;
-            velocity.y = 0;
+            this->velocity.zero();
         }
 
         void update() override{

@@ -32,8 +32,8 @@ class SpriteComponent : public Component
         }
 
         void update() override{
-            this->destRect.x = (int)this->transform->position.x;
-            this->destRect.y = (int)this->transform->position.y;
+            this->destRect.x = static_cast<int>(this->transform->position.x);
+            this->destRect.y = static_cast<int>(this->transform->position.y);
             this->destRect.w = transform->width * transform->scale;
             this->destRect.h = transform->height * transform->scale;
         }
