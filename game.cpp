@@ -4,6 +4,8 @@
 #include "map.h"
 #include "map.cpp"
 #include "ECS/component.h"
+#include "vector2D.h"
+#include "vector2D.cpp"
 
 //Map object declaration.
 Map* map;
@@ -40,7 +42,7 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         map = new Map();
 
         //Add components to the ECS manager.
-        player.addComponent< PositionComponent >();
+        player.addComponent< TransformComponent >();
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
 
         this->isRunning = true;
@@ -69,8 +71,9 @@ void Game::handleEvents(){
 void Game::update(){
     manager.refresh();
     manager.update();
+    player.getComponent< TransformComponent >().position.add( Vector2D( 4, 3 ) );
 
-    if( player.getComponent< PositionComponent >().x() > 100 ){
+    if( player.getComponent< TransformComponent >().position.x > 100 ){
         player.getComponent< SpriteComponent >().setTexture( "assets/WhiteCross.bmp" );
     }
 }

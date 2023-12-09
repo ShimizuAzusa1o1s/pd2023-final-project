@@ -1,4 +1,4 @@
 #pragma once
 #include "ECS.h"
-#include "positionComponent.h"
+#include "transformComponent.h"
 #include "spriteComponent.h"
