@@ -1,6 +1,9 @@
 #pragma once
 #include <iostream>
 #include <SDL2/SDL.h>
+#include <vector>
+
+class ColliderComponent;
 
 class Game{
     private:
@@ -10,10 +13,11 @@ class Game{
         //Static member variables.
         static SDL_Renderer* renderer;
         static SDL_Event event;
+        static std::vector< ColliderComponent* > colliders;
         //Constructors.
         Game();
         //Destructor.
-        ~Game();
+        ~Game(){}
         //Member functions.
         void initialize( const char* title, int xpos, int ypos, int width, int height, bool fullScreen );
         void handleEvents();

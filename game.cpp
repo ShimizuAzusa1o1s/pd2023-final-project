@@ -12,10 +12,15 @@ Map* map;
 SDL_Renderer* Game::renderer = nullptr;
 SDL_Event Game::event;
 
+std::vector< ColliderComponent* > Game::colliders;
+
 //Entity component system manager declaration.
 Manager manager;
 auto& player( manager.addEntity() );
 auto& wall( manager.addEntity() );
+auto& tile0( manager.addEntity() );
+auto& tile1( manager.addEntity() );
+auto& tile2( manager.addEntity() );
 
 Game::Game(){}
 
@@ -42,6 +47,12 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         map = new Map();
 
         //Add components to the ECS manager.
+        tile0.addComponent< TileComponent >( 200, 200, 32, 32, 0 );
+        tile1.addComponent< TileComponent >( 250, 250, 32, 32, 1 );
+        tile1.addComponent< ColliderComponent >( "grass" );
+        tile2.addComponent< TileComponent >( 150, 150, 32, 32, 2 );
+        tile2.addComponent< ColliderComponent >( "dirt" );
+
         player.addComponent< TransformComponent >();
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
         player.addComponent< KeyboardController >();
@@ -76,18 +87,14 @@ void Game::handleEvents(){
 void Game::update(){
     manager.refresh();
     manager.update();
-    if( Collision::AABB( player.getComponent< ColliderComponent >().collider,
-                        wall.getComponent< ColliderComponent >().collider ) ){
-        player.getComponent< TransformComponent >().scale = 1;
-        player.getComponent< TransformComponent >().velocity * -1;
-        std::cout << "Wall hit!" << std::endl;
+    for( auto cc : colliders ){
+        Collision::AABB( player.getComponent< ColliderComponent >(), *cc );
     }
 }
 
 //Update the game screen in accordance with the game entities.
 void Game::render(){
     SDL_RenderClear( renderer );
-    map->drawMap();
     manager.draw();
     SDL_RenderPresent( renderer );
 }
