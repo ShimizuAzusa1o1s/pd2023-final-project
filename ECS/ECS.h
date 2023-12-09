@@ -65,9 +65,10 @@ class Entity
             //auto: Let the compiler tell the given variable's type by itself.
             //Update all the components in the entity.  
             for( auto& c: components ) c->update();
+        }
+        void draw(){
             for( auto& c: components ) c->draw();
         }
-        void draw(){}
         bool isActive(){ return this->active; }
         void destroy(){ this->active = false; }
 

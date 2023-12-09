@@ -1,5 +1,5 @@
 #pragma once
-#include "ECS.h"
+#include "component.h"
 
 //Component used to record the entity's position.
 class PositionComponent : public Component
@@ -9,6 +9,16 @@ class PositionComponent : public Component
         int ypos;
 
     public:
+        PositionComponent(){
+            this->xpos = 0;
+            this->ypos = 0;
+        }
+        
+        PositionComponent( int x, int y ){
+            this->xpos = x;
+            this->ypos = y;
+        }
+
         int x(){ return this->xpos; }
         int y(){ return this->ypos; }
 

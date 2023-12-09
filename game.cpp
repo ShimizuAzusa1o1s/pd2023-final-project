@@ -1,16 +1,9 @@
 #include "game.h"
 #include "textureManager.h"
 #include "textureManager.cpp"
-#include "gameObject.h"
-#include "gameObject.cpp"
 #include "map.h"
 #include "map.cpp"
-#include "ECS.h"
-#include "component.h"
-
-//Game object declaration.
-GameObject* player;
-GameObject* enemy;
+#include "ECS/component.h"
 
 //Map object declaration.
 Map* map;
@@ -20,7 +13,7 @@ SDL_Renderer* Game::renderer = nullptr;
 
 //Entity component system manager declaration.
 Manager manager;
-auto& newPlayer( manager.addEntity() );
+auto& player( manager.addEntity() );
 
 Game::Game(){}
 
@@ -43,16 +36,12 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
             std::cout << "Renderer created!" << std::endl;
         } 
 
-        //Loading player's image into the program.
-        player = new GameObject( "assets/CDot.bmp", 0, 0 );
-        enemy = new GameObject( "assets/WhiteCross.bmp", 100, 0 );
-
         //Generating game maps.
         map = new Map();
 
-        //Add position component to the ECS manager.
-        newPlayer.addComponent< PositionComponent >();
-        newPlayer.getComponent< PositionComponent >();
+        //Add components to the ECS manager.
+        player.addComponent< PositionComponent >();
+        player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
 
         this->isRunning = true;
     }
@@ -78,17 +67,19 @@ void Game::handleEvents(){
 
 //Update the elements of the game entities.
 void Game::update(){
-    player->update();
-    enemy->update();
+    manager.refresh();
     manager.update();
+
+    if( player.getComponent< PositionComponent >().x() > 100 ){
+        player.getComponent< SpriteComponent >().setTexture( "assets/WhiteCross.bmp" );
+    }
 }
 
 //Update the game screen in accordance with the game entities.
 void Game::render(){
     SDL_RenderClear( renderer );
     map->drawMap();
-    player->render();
-    enemy->render();
+    manager.draw();
     SDL_RenderPresent( renderer );
 }
 
