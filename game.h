@@ -11,6 +11,7 @@ class Game{
         SDL_Window* window;
     public:
         //Static member variables.
+        static void addTile( int id, int x, int y );
         static SDL_Renderer* renderer;
         static SDL_Event event;
         static std::vector< ColliderComponent* > colliders;

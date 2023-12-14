@@ -18,9 +18,6 @@ std::vector< ColliderComponent* > Game::colliders;
 Manager manager;
 auto& player( manager.addEntity() );
 auto& wall( manager.addEntity() );
-auto& tile0( manager.addEntity() );
-auto& tile1( manager.addEntity() );
-auto& tile2( manager.addEntity() );
 
 Game::Game(){}
 
@@ -44,15 +41,9 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         } 
 
         //Generating game maps.
-        map = new Map();
+        Map::loadMap( "assets/Map.txt", 25, 20 );
 
         //Add components to the ECS manager.
-        tile0.addComponent< TileComponent >( 200, 200, 32, 32, 0 );
-        tile1.addComponent< TileComponent >( 250, 250, 32, 32, 1 );
-        tile1.addComponent< ColliderComponent >( "grass" );
-        tile2.addComponent< TileComponent >( 150, 150, 32, 32, 2 );
-        tile2.addComponent< ColliderComponent >( "dirt" );
-
         player.addComponent< TransformComponent >();
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
         player.addComponent< KeyboardController >();
@@ -110,4 +101,9 @@ void Game::clean(){
 //Check if the game is going to keep running in the whole game loop.
 bool Game::running(){
     return this->isRunning; 
+}
+
+void Game::addTile( int id, int x, int y ){
+    auto& tile( manager.addEntity() );
+    tile.addComponent< TileComponent >( x, y, 32, 32, id);
 }

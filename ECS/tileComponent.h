@@ -11,7 +11,7 @@ class TileComponent : public Component
         SpriteComponent* sprite;
         SDL_Rect tileRect;
         int tileID;
-        char* path;
+        const char* path;
 
         TileComponent() = default;
         TileComponent( int x, int y, int w, int h, int id ){
