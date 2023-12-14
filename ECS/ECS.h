@@ -11,19 +11,22 @@
 
 class Component;
 class Entity;
+class Manager;
 
 using ComponentID = std::size_t;
+using Group = std::size_t;
 
 //Distributing ID to the component(a pre-process for the I/O files)
 //inline: This function's implementation can replace their command at which they're called.
-inline ComponentID getComponentTypeID(){
-    static ComponentID lastID = 0;
+inline ComponentID getNewComponentTypeID(){
+    static ComponentID lastID = 0u;
     return lastID++;
 }
 
 //noexcept: Do not return any exception.
 template <typename T> inline ComponentID getComponentTypeID() noexcept{
-    static ComponentID typeID = getComponentTypeID();
+    static_assert( std::is_base_of< Component, T >::value, "" );
+    static ComponentID typeID = getNewComponentTypeID();
     return typeID;
 }
 
@@ -31,10 +34,12 @@ template <typename T> inline ComponentID getComponentTypeID() noexcept{
 //Variable's value with this prefix should be determined in the compile stage,
 //and it cannot be modified by any syntax.  
 constexpr std::size_t maxComponents = 32;
+constexpr std::size_t maxGroups = 32;
 
 //bitset: Optimized bool array.
 //To set a bitset storing status of the components.
 using ComponentBitSet = std::bitset< maxComponents >;
+using GroupBitSet = std::bitset< maxGroups >;
 
 //To store the components themselves.
 using ComponentArray = std::array< Component*, maxComponents >;
@@ -53,6 +58,7 @@ class Component
 class Entity
 {
     private:
+        Manager& manager;
         bool active = true;
         //unique_ptr: 
         //Pointer that owns and manages another object through a pointer 
@@ -60,7 +66,9 @@ class Entity
         std::vector< std::unique_ptr< Component > > components;
         ComponentArray componentArray;
         ComponentBitSet componentBitSet;
+        GroupBitSet groupBitset;
     public:
+        Entity( Manager& mManager ) : manager( mManager ){}
         void update(){
             //auto: Let the compiler tell the given variable's type by itself.
             //Update all the components in the entity.  
@@ -71,6 +79,16 @@ class Entity
         }
         bool isActive(){ return this->active; }
         void destroy(){ this->active = false; }
+
+        bool hasGroup( Group mGroup ){
+            return groupBitset[ mGroup ];
+        }
+
+        void addGroup( Group mGroup );
+        
+        void delGroup( Group mGroup ){ 
+            groupBitset[ mGroup ] = false;
+        }
 
         //Check if the entity has a certain component.
         template< typename T > bool hasComponent(){ return componentBitSet[ getComponentTypeID<T>() ]; }
@@ -113,7 +131,8 @@ class Entity
 class Manager
 {
     private:
-        std::vector<std::unique_ptr< Entity > > entities;
+        std::vector< std::unique_ptr< Entity > > entities;
+        std::array< std::vector< Entity* >, maxGroups > groupedEntities;
     public:
         //Update the entity's information.
         void update(){
@@ -128,19 +147,39 @@ class Manager
         //Removes inactive entities from the entities collection based on the isActive() method of the Entity objects.
         //Details: https://chat.openai.com/share/c111527a-eb08-491e-bc28-e3bf77d064b9
         void refresh(){
+            for( auto i(0u); i < maxGroups; i++ ){
+                auto& v( groupedEntities[i] );
+                v.erase(
+                    std::remove_if(
+                        std::begin(v),
+                        std::end(v),
+                        [i]( Entity* mEntity ){ return !mEntity->isActive() || !mEntity->hasGroup(i); }
+                    ),
+                    std::end(v)
+                );
+            }
+
             this->entities.erase( 
                 std::remove_if( 
                     std::begin( entities ), 
-                    std::end( entities ) , 
+                    std::end( entities ), 
                     []( const std::unique_ptr< Entity > &mEntity ){ return !mEntity->isActive(); } 
                 ),
                 std::end( entities )
             );
         }
 
+        void addToGroup( Entity* mEntity, Group mGroup ){
+            groupedEntities[ mGroup ].emplace_back( mEntity );
+        }
+
+        std::vector<Entity*>& getGroup( Group mGroup ){
+            return groupedEntities[ mGroup ];
+        }
+
         //Add entity to the manager.
         Entity& addEntity(){
-            Entity* e = new Entity();
+            Entity* e = new Entity(*this);
             std::unique_ptr< Entity > uPtr{ e };
             this->entities.emplace_back( std::move( uPtr ) );
             return *e;

@@ -4,6 +4,7 @@
 #include "map.cpp"
 #include "vector2D.cpp"
 #include "ECS/collision.cpp"
+#include "ECS/ECS.cpp"
 
 //Controling max frame rate.
 const int FPS = 60;

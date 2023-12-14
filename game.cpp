@@ -19,6 +19,13 @@ Manager manager;
 auto& player( manager.addEntity() );
 auto& wall( manager.addEntity() );
 
+enum groupLabels : std::size_t{
+    groupMap,
+    groupPlayers,
+    groupEnemies,
+    groupColliders
+};
+
 Game::Game(){}
 
 //Initialize elements composing of the game. e.g: Game window, renderer, etc.
@@ -45,13 +52,24 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
 
         //Add components to the ECS manager.
         player.addComponent< TransformComponent >();
+        std::cout << "Player created 1/5!" << std::endl;
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
+        std::cout << "Player created 2/5!" << std::endl;
         player.addComponent< KeyboardController >();
+        std::cout << "Player created 3/5!" << std::endl;
         player.addComponent< ColliderComponent >( "player" );
+        std::cout << "Player created 4/5!" << std::endl;
+        player.addGroup( groupPlayers );
+        std::cout << "Player created 5/5!" << std::endl;
 
         wall.addComponent< TransformComponent >( 300, 500, 300, 20, 1 );
+        std::cout << "Wall created 1/4!" << std::endl;
         wall.addComponent< SpriteComponent >( "assets/Wall.bmp" );
+        std::cout << "Wall created 2/4!" << std::endl;
         wall.addComponent< ColliderComponent >( "wall" );
+        std::cout << "Wall created 3/4!" << std::endl;
+        wall.addGroup( groupMap );
+        std::cout << "Wall created 4/4!" << std::endl;
 
         this->isRunning = true;
     }
@@ -83,10 +101,24 @@ void Game::update(){
     }
 }
 
+auto& tiles( manager.getGroup( groupMap ) );
+auto& players( manager.getGroup( groupPlayers ) );
+auto& enemies( manager.getGroup( groupEnemies ) );
+
 //Update the game screen in accordance with the game entities.
 void Game::render(){
     SDL_RenderClear( renderer );
-    manager.draw();
+
+    for( auto& t : tiles ){
+        t->draw();
+    }
+    for( auto& p : players ){
+        p->draw();
+    }
+    for( auto& e : enemies ){
+        e->draw();
+    }
+
     SDL_RenderPresent( renderer );
 }
 
@@ -106,4 +138,5 @@ bool Game::running(){
 void Game::addTile( int id, int x, int y ){
     auto& tile( manager.addEntity() );
     tile.addComponent< TileComponent >( x, y, 32, 32, id);
+    tile.addGroup( groupMap );
 }
