@@ -17,7 +17,10 @@ std::vector< ColliderComponent* > Game::colliders;
 //Entity component system manager declaration.
 Manager manager;
 auto& player( manager.addEntity() );
-auto& wall( manager.addEntity() );
+auto& eastWall( manager.addEntity() );
+auto& westWall( manager.addEntity() );
+auto& northWall( manager.addEntity() );
+auto& southWall( manager.addEntity() );
 
 enum groupLabels : std::size_t{
     groupMap,
@@ -50,26 +53,30 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         //Generating game maps.
         Map::loadMap( "assets/Map.txt", 25, 20 );
 
-        //Add components to the ECS manager.
-        player.addComponent< TransformComponent >();
-        std::cout << "Player created 1/5!" << std::endl;
+        //Add player to the ECS manager.
+        player.addComponent< TransformComponent >( 384, 304 );
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
-        std::cout << "Player created 2/5!" << std::endl;
         player.addComponent< KeyboardController >();
-        std::cout << "Player created 3/5!" << std::endl;
-        player.addComponent< ColliderComponent >( "player" );
-        std::cout << "Player created 4/5!" << std::endl;
+        player.addComponent< ColliderComponent >( "Player" );
         player.addGroup( groupPlayers );
-        std::cout << "Player created 5/5!" << std::endl;
 
-        wall.addComponent< TransformComponent >( 300, 500, 300, 20, 1 );
-        std::cout << "Wall created 1/4!" << std::endl;
-        wall.addComponent< SpriteComponent >( "assets/Wall.bmp" );
-        std::cout << "Wall created 2/4!" << std::endl;
-        wall.addComponent< ColliderComponent >( "wall" );
-        std::cout << "Wall created 3/4!" << std::endl;
-        wall.addGroup( groupMap );
-        std::cout << "Wall created 4/4!" << std::endl;
+        //Add wall to the ECS manager.
+        eastWall.addComponent< TransformComponent >( 790, 0, 10, 640, 1 );
+        eastWall.addComponent< SpriteComponent >( "assets/VerticalWall.bmp" );
+        eastWall.addComponent< ColliderComponent >( "eWall" );
+        eastWall.addGroup( groupMap );
+        westWall.addComponent< TransformComponent >( 0, 0, 10, 640, 1 );
+        westWall.addComponent< SpriteComponent >( "assets/VerticalWall.bmp" );
+        westWall.addComponent< ColliderComponent >( "wWall" );
+        westWall.addGroup( groupMap );
+        northWall.addComponent< TransformComponent >( 0, 0, 800, 10, 1 );
+        northWall.addComponent< SpriteComponent >( "assets/HorizontalWall.bmp" );
+        northWall.addComponent< ColliderComponent >( "nWall" );
+        northWall.addGroup( groupMap );
+        southWall.addComponent< TransformComponent >( 0, 630, 800, 10, 1 );
+        southWall.addComponent< SpriteComponent >( "assets/HorizontalWall.bmp" );
+        southWall.addComponent< ColliderComponent >( "sWall" );
+        southWall.addGroup( groupMap );
 
         this->isRunning = true;
     }
@@ -97,7 +104,24 @@ void Game::update(){
     manager.refresh();
     manager.update();
     for( auto cc : colliders ){
-        Collision::AABB( player.getComponent< ColliderComponent >(), *cc );
+        if( Collision::AABB( player.getComponent< ColliderComponent >(), *cc ) ){
+            if( cc->tag == "eWall" ){
+                player.getComponent< TransformComponent >().position.x -=
+                player.getComponent< TransformComponent >().speed;
+            }
+            if( cc->tag == "wWall" ){
+                player.getComponent< TransformComponent >().position.x +=
+                player.getComponent< TransformComponent >().speed;
+            }
+            if( cc->tag == "nWall" ){
+                player.getComponent< TransformComponent >().position.y +=
+                player.getComponent< TransformComponent >().speed;
+            }
+            if( cc->tag == "sWall" ){
+                player.getComponent< TransformComponent >().position.y -=
+                player.getComponent< TransformComponent >().speed;
+            }
+        }
     }
 }
 
