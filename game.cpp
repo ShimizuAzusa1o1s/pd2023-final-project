@@ -17,6 +17,8 @@ std::vector< ColliderComponent* > Game::colliders;
 //Entity component system manager declaration.
 Manager manager;
 auto& player( manager.addEntity() );
+auto& enemy( manager.addEntity() );
+auto& heart( manager.addEntity() );
 auto& eastWall( manager.addEntity() );
 auto& westWall( manager.addEntity() );
 auto& northWall( manager.addEntity() );
@@ -26,7 +28,8 @@ enum groupLabels : std::size_t{
     groupMap,
     groupPlayers,
     groupEnemies,
-    groupColliders
+    groupColliders,
+    groupStatsObject
 };
 
 Game::Game(){}
@@ -54,11 +57,23 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         Map::loadMap( "assets/Map.txt", 25, 20 );
 
         //Add player to the ECS manager.
-        player.addComponent< TransformComponent >( 384, 304 );
+        player.addComponent< TransformComponent >( 384, 526 );
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
         player.addComponent< KeyboardController >();
         player.addComponent< ColliderComponent >( "Player" );
+        player.addComponent< StatsComponent >( 1 );
         player.addGroup( groupPlayers );
+
+        //Add health point to the ECS manager.
+        heart.addComponent< TransformComponent >( 384, 654 );
+        heart.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
+        heart.addGroup( groupStatsObject);
+
+        //Add enemy to the ECS manager.
+        enemy.addComponent< TransformComponent >( 384, 15 );
+        enemy.addComponent< SpriteComponent >( "assets/WhiteCross.bmp" );
+        enemy.addComponent< ColliderComponent >( "Enemy" );
+        enemy.addGroup( groupEnemies );
 
         //Add wall to the ECS manager.
         eastWall.addComponent< TransformComponent >( 790, 0, 10, 640, 1 );
@@ -103,6 +118,7 @@ void Game::handleEvents(){
 void Game::update(){
     manager.refresh();
     manager.update();
+    //Wall rebound evaluation.
     for( auto cc : colliders ){
         if( Collision::AABB( player.getComponent< ColliderComponent >(), *cc ) ){
             if( cc->tag == "eWall" ){
@@ -121,6 +137,13 @@ void Game::update(){
                 player.getComponent< TransformComponent >().position.y -=
                 player.getComponent< TransformComponent >().speed;
             }
+            if( cc->tag == "Enemy" ){
+                player.getComponent< TransformComponent >().velocity * 0;
+                Vector2D respawnPoint( 384, 526 );
+                player.getComponent< StatsComponent >().healthPoint--;
+                player.getComponent< TransformComponent >().position = respawnPoint;
+                heart.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
+            }
         }
     }
 }
@@ -128,6 +151,7 @@ void Game::update(){
 auto& tiles( manager.getGroup( groupMap ) );
 auto& players( manager.getGroup( groupPlayers ) );
 auto& enemies( manager.getGroup( groupEnemies ) );
+auto& stats( manager.getGroup( groupStatsObject ) );
 
 //Update the game screen in accordance with the game entities.
 void Game::render(){
@@ -141,6 +165,9 @@ void Game::render(){
     }
     for( auto& e : enemies ){
         e->draw();
+    }
+    for( auto& s : stats ){
+        s->draw();
     }
 
     SDL_RenderPresent( renderer );
