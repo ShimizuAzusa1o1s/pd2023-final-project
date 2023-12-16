@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <cmath>
 
 class Vector2D
 {
@@ -9,7 +10,8 @@ class Vector2D
         
         Vector2D();
         Vector2D( float x, float y );
-        
+
+        void unitVector();
         Vector2D& add( const Vector2D& vec );
         Vector2D& subtract( const Vector2D& vec );
         Vector2D& multiply( const Vector2D& vec );

@@ -10,6 +10,15 @@ Vector2D::Vector2D( float x, float y ){
     this->y = y;
 }
 
+void Vector2D::unitVector(){
+    double xSquare = pow( this->x, 2 );
+    double ySquare = pow( this->y, 2 );
+    double dist = sqrt( xSquare + ySquare );
+    this->x /= dist;
+    this->y /= dist;
+    return;
+}
+
 Vector2D& Vector2D::add( const Vector2D& vec ){
     this->x += vec.x;
     this->y += vec.y;

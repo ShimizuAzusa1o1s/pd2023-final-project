@@ -39,6 +39,6 @@ class SpriteComponent : public Component
         }
 
         void draw() override{
-            TextureManager::draw( this->texture, this->srcRect, this->destRect );
+            TextureManager::drawTexture( this->texture, this->srcRect, this->destRect );
         }
 };

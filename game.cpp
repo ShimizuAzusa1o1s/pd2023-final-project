@@ -85,6 +85,9 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         enemy.addComponent< SpriteComponent >( "assets/WhiteCross.bmp" );
         enemy.addComponent< ColliderComponent >( "Enemy" );
         enemy.addGroup( groupEnemies );
+        enemy.getComponent< TransformComponent >().velocity.x = 1;
+        enemy.getComponent< TransformComponent >().velocity.y = 1;
+        enemy.getComponent< TransformComponent >().speed = 2;
 
         //Add wall to the ECS manager.
         eastWall.addComponent< TransformComponent >( 790, 0, 10, 640, 1 );
@@ -129,6 +132,14 @@ void Game::handleEvents(){
 void Game::update(){
     manager.refresh();
     manager.update();
+    Vector2D direction( 
+        player.getComponent< TransformComponent >().position.x - enemy.getComponent< TransformComponent >().position.x,
+        player.getComponent< TransformComponent >().position.y - enemy.getComponent< TransformComponent >().position.y
+    );
+    direction.unitVector();
+    enemy.getComponent< TransformComponent >().velocity.x = direction.x;
+    enemy.getComponent< TransformComponent >().velocity.y = direction.y;
+
     //Wall rebound evaluation.
     for( auto cc : colliders ){
         //Player collision.
@@ -169,7 +180,12 @@ void Game::update(){
         }
         //Enemy collision.
         if( Collision::AABB( enemy.getComponent< ColliderComponent >(), *cc ) ){
-
+            if( cc->tag == "eWall" || cc->tag == "wWall" ){
+                enemy.getComponent< TransformComponent >().velocity.x *= -1;
+            }
+            if( cc->tag == "nWall" || cc->tag == "sWall" ){
+                enemy.getComponent< TransformComponent >().velocity.y *= -1;
+            }
         }
     }
 }

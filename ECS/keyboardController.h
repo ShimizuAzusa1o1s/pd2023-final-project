@@ -5,6 +5,8 @@
 
 class KeyboardController : public Component
 {
+    private:
+        const Uint8* keyStates = SDL_GetKeyboardState(NULL);
     public:
         TransformComponent *transform;
 
@@ -14,35 +16,33 @@ class KeyboardController : public Component
 
         void update() override{
             if( Game::event.type == SDL_KEYDOWN ){
-                switch( Game::event.key.keysym.sym ){
-                    case SDLK_w:
+                switch( Game::event.key.keysym.scancode ){
+                    case SDL_SCANCODE_W:
                         transform->velocity.y = -1;
                         break;
-                    case SDLK_a:
+                    case SDL_SCANCODE_A:
                         transform->velocity.x = -1;
                         break;
-                    case SDLK_d:
+                    case SDL_SCANCODE_D:
                         transform->velocity.x = 1;
                         break;
-                    case SDLK_s:
+                    case SDL_SCANCODE_S:
                         transform->velocity.y = 1;
                         break;
+                    default:;
                 }
             }
-            else if( Game::event.type == SDL_KEYUP ){
-                switch( Game::event.key.keysym.sym ){
-                    case SDLK_w:
-                        transform->velocity.y = 0;
+            if( Game::event.type == SDL_KEYUP ){
+                switch( Game::event.key.keysym.scancode ){
+                    case SDL_SCANCODE_W:
+                    case SDL_SCANCODE_S:
+                        transform->velocity.y = keyStates[SDL_SCANCODE_S] - keyStates[SDL_SCANCODE_W];
                         break;
-                    case SDLK_a:
-                        transform->velocity.x = 0;
+                    case SDL_SCANCODE_A:
+                    case SDL_SCANCODE_D:
+                        transform->velocity.x = keyStates[SDL_SCANCODE_D] - keyStates[SDL_SCANCODE_A];
                         break;
-                    case SDLK_d:
-                        transform->velocity.x = 0;
-                        break;
-                    case SDLK_s:
-                        transform->velocity.y = 0;
-                        break;
+                    default:;
                 }
             }
         }
