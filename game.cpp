@@ -16,9 +16,14 @@ std::vector< ColliderComponent* > Game::colliders;
 
 //Entity component system manager declaration.
 Manager manager;
+
 auto& player( manager.addEntity() );
 auto& enemy( manager.addEntity() );
-auto& heart( manager.addEntity() );
+
+auto& heart1( manager.addEntity() );
+auto& heart2( manager.addEntity() );
+auto& heart3( manager.addEntity() );
+
 auto& eastWall( manager.addEntity() );
 auto& westWall( manager.addEntity() );
 auto& northWall( manager.addEntity() );
@@ -61,13 +66,19 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
         player.addComponent< KeyboardController >();
         player.addComponent< ColliderComponent >( "Player" );
-        player.addComponent< StatsComponent >( 1 );
+        player.addComponent< StatsComponent >( 3 );
         player.addGroup( groupPlayers );
 
         //Add health point to the ECS manager.
-        heart.addComponent< TransformComponent >( 384, 654 );
-        heart.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
-        heart.addGroup( groupStatsObject);
+        heart1.addComponent< TransformComponent >( 334, 654 );
+        heart1.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
+        heart1.addGroup( groupStatsObject );
+        heart2.addComponent< TransformComponent >( 384, 654 );
+        heart2.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
+        heart2.addGroup( groupStatsObject );
+        heart3.addComponent< TransformComponent >( 434, 654 );
+        heart3.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
+        heart3.addGroup( groupStatsObject );
 
         //Add enemy to the ECS manager.
         enemy.addComponent< TransformComponent >( 384, 15 );
@@ -120,6 +131,7 @@ void Game::update(){
     manager.update();
     //Wall rebound evaluation.
     for( auto cc : colliders ){
+        //Player collision.
         if( Collision::AABB( player.getComponent< ColliderComponent >(), *cc ) ){
             if( cc->tag == "eWall" ){
                 player.getComponent< TransformComponent >().position.x -=
@@ -142,8 +154,22 @@ void Game::update(){
                 Vector2D respawnPoint( 384, 526 );
                 player.getComponent< StatsComponent >().healthPoint--;
                 player.getComponent< TransformComponent >().position = respawnPoint;
-                heart.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
+                switch( player.getComponent< StatsComponent >().healthPoint ){
+                    case 2:
+                        heart1.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
+                        break;
+                    case 1:
+                        heart2.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
+                        break;
+                    case 0:
+                        heart3.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
+                        break;
+                }
             }
+        }
+        //Enemy collision.
+        if( Collision::AABB( enemy.getComponent< ColliderComponent >(), *cc ) ){
+
         }
     }
 }
@@ -188,6 +214,6 @@ bool Game::running(){
 
 void Game::addTile( int id, int x, int y ){
     auto& tile( manager.addEntity() );
-    tile.addComponent< TileComponent >( x, y, 32, 32, id);
+    tile.addComponent< TileComponent >( x, y, 32, 32, id );
     tile.addGroup( groupMap );
 }
