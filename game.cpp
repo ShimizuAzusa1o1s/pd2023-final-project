@@ -12,7 +12,11 @@ Map* map;
 SDL_Renderer* Game::renderer = nullptr;
 SDL_Event Game::event;
 
+//Colliders declaration.
 std::vector< ColliderComponent* > Game::colliders;
+
+//Game status indicator.
+bool isTagRunning = true;
 
 //Entity component system manager declaration.
 Manager manager;
@@ -23,6 +27,7 @@ auto& enemy( manager.addEntity() );
 auto& heart1( manager.addEntity() );
 auto& heart2( manager.addEntity() );
 auto& heart3( manager.addEntity() );
+auto& gameOver( manager.addEntity() );
 
 auto& eastWall( manager.addEntity() );
 auto& westWall( manager.addEntity() );
@@ -79,6 +84,9 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         heart3.addComponent< TransformComponent >( 434, 654 );
         heart3.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
         heart3.addGroup( groupStatsObject );
+        gameOver.addComponent< TransformComponent >( 165, 290, 94, 16, 5 );
+        gameOver.addComponent< SpriteComponent >();
+        gameOver.addGroup( groupStatsObject );
 
         //Add enemy to the ECS manager.
         enemy.addComponent< TransformComponent >( 384, 15 );
@@ -132,6 +140,7 @@ void Game::handleEvents(){
 void Game::update(){
     manager.refresh();
     manager.update();
+    if( !isTagRunning ) return;
     Vector2D direction( 
         player.getComponent< TransformComponent >().position.x - enemy.getComponent< TransformComponent >().position.x,
         player.getComponent< TransformComponent >().position.y - enemy.getComponent< TransformComponent >().position.y
@@ -142,7 +151,6 @@ void Game::update(){
 
     //Wall rebound evaluation.
     for( auto cc : colliders ){
-        //Player collision.
         if( Collision::AABB( player.getComponent< ColliderComponent >(), *cc ) ){
             if( cc->tag == "eWall" ){
                 player.getComponent< TransformComponent >().position.x -=
@@ -162,9 +170,11 @@ void Game::update(){
             }
             if( cc->tag == "Enemy" ){
                 player.getComponent< TransformComponent >().velocity * 0;
-                Vector2D respawnPoint( 384, 526 );
+                Vector2D playerRespawn( 384, 526 );
+                Vector2D enemyRespawn( 384, 15 );
                 player.getComponent< StatsComponent >().healthPoint--;
-                player.getComponent< TransformComponent >().position = respawnPoint;
+                player.getComponent< TransformComponent >().position = playerRespawn;
+                enemy.getComponent< TransformComponent >().position = enemyRespawn;
                 switch( player.getComponent< StatsComponent >().healthPoint ){
                     case 2:
                         heart1.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
@@ -174,6 +184,10 @@ void Game::update(){
                         break;
                     case 0:
                         heart3.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
+                        gameOver.getComponent< SpriteComponent >().setTexture( "assets/GameOver.bmp" );
+                        player.destroy();
+                        enemy.destroy();
+                        isTagRunning = false;
                         break;
                 }
             }
