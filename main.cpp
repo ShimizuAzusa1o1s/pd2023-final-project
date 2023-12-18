@@ -20,7 +20,7 @@ int main( int argc, char* argv[] ){
     int frameTime = 0;
 
     //Initialize the game.
-    game->initialize( "Tag", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 700, false );
+    game->initialize( "Tag", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 900, 640, false );
     while( game->running() ){
         //Obtain the start of the this game loop.
         frameStart = SDL_GetTicks();

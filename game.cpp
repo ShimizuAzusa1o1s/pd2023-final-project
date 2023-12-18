@@ -10,6 +10,8 @@ Map* map;
 
 //Texture manager declaration.
 SDL_Renderer* Game::renderer = nullptr;
+
+//Game event declaration.
 SDL_Event Game::event;
 
 //Colliders declaration.
@@ -17,23 +19,12 @@ std::vector< ColliderComponent* > Game::colliders;
 
 //Game status indicator.
 bool isTagRunning = true;
+int gameTime = 0;
 
 //Entity component system manager declaration.
 Manager manager;
 
-auto& player( manager.addEntity() );
-auto& enemy( manager.addEntity() );
-
-auto& heart1( manager.addEntity() );
-auto& heart2( manager.addEntity() );
-auto& heart3( manager.addEntity() );
-auto& gameOver( manager.addEntity() );
-
-auto& eastWall( manager.addEntity() );
-auto& westWall( manager.addEntity() );
-auto& northWall( manager.addEntity() );
-auto& southWall( manager.addEntity() );
-
+//Group labels declaration.
 enum groupLabels : std::size_t{
     groupMap,
     groupPlayers,
@@ -41,6 +32,28 @@ enum groupLabels : std::size_t{
     groupColliders,
     groupStatsObject
 };
+
+//Players declaration.
+auto& player( manager.addEntity() );
+auto& players( manager.getGroup( groupPlayers ) );
+
+//Enemies declaration.
+auto& enemy( manager.addEntity() );
+auto& enemies( manager.getGroup( groupEnemies ) );
+
+//Player status object declaration.
+auto& heart1( manager.addEntity() );
+auto& heart2( manager.addEntity() );
+auto& heart3( manager.addEntity() );
+auto& gameOver( manager.addEntity() );
+auto& stats( manager.getGroup( groupStatsObject ) );
+
+//Map objects declaration.
+auto& eastWall( manager.addEntity() );
+auto& westWall( manager.addEntity() );
+auto& northWall( manager.addEntity() );
+auto& southWall( manager.addEntity() );
+auto& tiles( manager.getGroup( groupMap ) );
 
 Game::Game(){}
 
@@ -75,15 +88,17 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         player.addGroup( groupPlayers );
 
         //Add health point to the ECS manager.
-        heart1.addComponent< TransformComponent >( 334, 654 );
+        heart1.addComponent< TransformComponent >( 830, 54 );
         heart1.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
         heart1.addGroup( groupStatsObject );
-        heart2.addComponent< TransformComponent >( 384, 654 );
+        heart2.addComponent< TransformComponent >( 830, 108 );
         heart2.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
         heart2.addGroup( groupStatsObject );
-        heart3.addComponent< TransformComponent >( 434, 654 );
+        heart3.addComponent< TransformComponent >( 830, 162 );
         heart3.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
         heart3.addGroup( groupStatsObject );
+
+        //Add gameover banner to the ECS manager.
         gameOver.addComponent< TransformComponent >( 165, 290, 94, 16, 5 );
         gameOver.addComponent< SpriteComponent >();
         gameOver.addGroup( groupStatsObject );
@@ -92,10 +107,8 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         enemy.addComponent< TransformComponent >( 384, 15 );
         enemy.addComponent< SpriteComponent >( "assets/WhiteCross.bmp" );
         enemy.addComponent< ColliderComponent >( "Enemy" );
+        enemy.addComponent< StatsComponent >( 10 );
         enemy.addGroup( groupEnemies );
-        enemy.getComponent< TransformComponent >().velocity.x = 1;
-        enemy.getComponent< TransformComponent >().velocity.y = 1;
-        enemy.getComponent< TransformComponent >().speed = 2;
 
         //Add wall to the ECS manager.
         eastWall.addComponent< TransformComponent >( 790, 0, 10, 640, 1 );
@@ -138,43 +151,86 @@ void Game::handleEvents(){
 
 //Update the elements of the game entities.
 void Game::update(){
+    //Update the status of game object.
     manager.refresh();
     manager.update();
+    //Stop if the game had ended.
     if( !isTagRunning ) return;
-    Vector2D direction( 
-        player.getComponent< TransformComponent >().position.x - enemy.getComponent< TransformComponent >().position.x,
-        player.getComponent< TransformComponent >().position.y - enemy.getComponent< TransformComponent >().position.y
-    );
-    direction.unitVector();
-    enemy.getComponent< TransformComponent >().velocity.x = direction.x;
-    enemy.getComponent< TransformComponent >().velocity.y = direction.y;
+
+    //Timer, recorded second by second.
+    if( SDL_GetTicks() > 1000 * gameTime ){
+        gameTime++;
+        //Add cooldown to ensure that no overshooting in the same second.
+        enemy.getComponent< StatsComponent >().skillCooldown = true;
+        //Invincible time deducted.
+        if( player.getComponent< StatsComponent >().invincibleTime != 0 ){
+            player.getComponent< StatsComponent >().invincibleTime--;
+        }
+        else{
+            player.getComponent< SpriteComponent >().setTexture( "assets/CDot.bmp" );
+        }
+    }
+
+    //Add enemy every 10 seconds.
+    if( gameTime % 10 == 0 && enemy.getComponent< StatsComponent >().skillCooldown == true ){
+        //Enemy set in cooldown
+        enemy.getComponent< StatsComponent >().skillCooldown = false;
+        //Add new bullets.
+        //Bullets increase while their speed decrease.
+        for( int i = 0; i < gameTime / 5; i++ ){
+            auto& bullet( manager.addEntity() );
+            //Bullets are generated at enemy's position.
+            bullet.addComponent< TransformComponent >
+            ( enemy.getComponent< TransformComponent >().position.x,
+            enemy.getComponent< TransformComponent >().position.y, 10, 10, 2 );
+            bullet.addComponent< SpriteComponent >( "assets/Bullet.bmp" );
+            bullet.addComponent< ColliderComponent >( "EnemySummon" );
+            bullet.addComponent< StatsComponent >( 5 );
+            bullet.addGroup( groupEnemies );
+            //Calculating initial direction of bullets.
+            Vector2D direction( 
+                player.getComponent< TransformComponent >().position.x - 
+                enemy.getComponent< TransformComponent >().position.x + 100 * ( i - static_cast<float>( ( gameTime - 5 ) / 10 ) ),
+                player.getComponent< TransformComponent >().position.y - 
+                enemy.getComponent< TransformComponent >().position.y
+            );
+            direction.unitVector();
+            //Spread bullets in arc mode.
+            bullet.getComponent< TransformComponent >().velocity.x = direction.x;
+            bullet.getComponent< TransformComponent >().velocity.y = direction.y;
+            bullet.getComponent< TransformComponent >().speed = 5 - i / 2.5 ;
+        }
+    }
 
     //Wall rebound evaluation.
     for( auto cc : colliders ){
         if( Collision::AABB( player.getComponent< ColliderComponent >(), *cc ) ){
+            //Player hit vertical wall.
             if( cc->tag == "eWall" ){
                 player.getComponent< TransformComponent >().position.x -=
                 player.getComponent< TransformComponent >().speed;
             }
-            if( cc->tag == "wWall" ){
+            else if( cc->tag == "wWall" ){
                 player.getComponent< TransformComponent >().position.x +=
                 player.getComponent< TransformComponent >().speed;
             }
+            //Player hit horizontal wall.
             if( cc->tag == "nWall" ){
                 player.getComponent< TransformComponent >().position.y +=
                 player.getComponent< TransformComponent >().speed;
             }
-            if( cc->tag == "sWall" ){
+            else if( cc->tag == "sWall" ){
                 player.getComponent< TransformComponent >().position.y -=
                 player.getComponent< TransformComponent >().speed;
             }
-            if( cc->tag == "Enemy" ){
-                player.getComponent< TransformComponent >().velocity * 0;
-                Vector2D playerRespawn( 384, 526 );
-                Vector2D enemyRespawn( 384, 15 );
+            //Player hits enemy.
+            if( ( cc->tag == "Enemy" || cc->tag == "EnemySummon" ) &&
+                player.getComponent< StatsComponent >().invincibleTime == 0 ){
+                //Player hit, damaged.
                 player.getComponent< StatsComponent >().healthPoint--;
-                player.getComponent< TransformComponent >().position = playerRespawn;
-                enemy.getComponent< TransformComponent >().position = enemyRespawn;
+                player.getComponent< StatsComponent >().invincibleTime = 2;
+                player.getComponent< SpriteComponent >().setTexture( "assets/InvincibleCDot.bmp" );
+                //healthPoint deducted.
                 switch( player.getComponent< StatsComponent >().healthPoint ){
                     case 2:
                         heart1.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
@@ -183,36 +239,35 @@ void Game::update(){
                         heart2.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
                         break;
                     case 0:
+                        //healthPoint is used up, gameover.
                         heart3.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
                         gameOver.getComponent< SpriteComponent >().setTexture( "assets/GameOver.bmp" );
                         player.destroy();
-                        enemy.destroy();
+                        for( auto& e : enemies ){
+                            e->destroy();
+                        }
                         isTagRunning = false;
                         break;
                 }
             }
         }
         //Enemy collision.
-        if( Collision::AABB( enemy.getComponent< ColliderComponent >(), *cc ) ){
-            if( cc->tag == "eWall" || cc->tag == "wWall" ){
-                enemy.getComponent< TransformComponent >().velocity.x *= -1;
-            }
-            if( cc->tag == "nWall" || cc->tag == "sWall" ){
-                enemy.getComponent< TransformComponent >().velocity.y *= -1;
+        for( auto& e: enemies ){
+            if( Collision::AABB( e->getComponent< ColliderComponent >(), *cc ) ){
+                if( cc->tag == "eWall" || cc->tag == "wWall" ){
+                    e->getComponent< TransformComponent >().velocity.x *= -1;
+                }
+                if( cc->tag == "nWall" || cc->tag == "sWall" ){
+                    e->getComponent< TransformComponent >().velocity.y *= -1;
+                }
             }
         }
     }
 }
 
-auto& tiles( manager.getGroup( groupMap ) );
-auto& players( manager.getGroup( groupPlayers ) );
-auto& enemies( manager.getGroup( groupEnemies ) );
-auto& stats( manager.getGroup( groupStatsObject ) );
-
 //Update the game screen in accordance with the game entities.
 void Game::render(){
     SDL_RenderClear( renderer );
-
     for( auto& t : tiles ){
         t->draw();
     }
@@ -225,7 +280,6 @@ void Game::render(){
     for( auto& s : stats ){
         s->draw();
     }
-
     SDL_RenderPresent( renderer );
 }
 
@@ -242,6 +296,7 @@ bool Game::running(){
     return this->isRunning; 
 }
 
+//Add map tiles.
 void Game::addTile( int id, int x, int y ){
     auto& tile( manager.addEntity() );
     tile.addComponent< TileComponent >( x, y, 32, 32, id );

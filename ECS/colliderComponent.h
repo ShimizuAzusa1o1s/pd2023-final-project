@@ -18,12 +18,12 @@ class ColliderComponent : public Component
             }
             transform = &entity->getComponent< TransformComponent >();
 
-            Game::colliders.push_back(this);
+            Game::colliders.push_back( this );
         }
 
         void update() override{
-            this->collider.x = static_cast<int>(transform->position.x);
-            this->collider.y = static_cast<int>(transform->position.y);
+            this->collider.x = static_cast<int>( transform->position.x );
+            this->collider.y = static_cast<int>( transform->position.y );
             this->collider.w = transform->width * transform->scale;
             this->collider.h = transform->height * transform->scale;
         }

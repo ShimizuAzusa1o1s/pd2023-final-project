@@ -13,7 +13,7 @@ class TransformComponent : public Component
         int width = 16;
         int scale = 2;
 
-        int speed = 3;
+        float speed = 3;
 
         TransformComponent(){
             this->position.zero();
