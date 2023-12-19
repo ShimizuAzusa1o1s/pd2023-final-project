@@ -28,4 +28,3 @@ void Map::loadMap( std::string path, int sizeX, int sizeY ){
 
     mapFile.close();
 }
-

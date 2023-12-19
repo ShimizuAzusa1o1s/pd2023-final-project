@@ -80,8 +80,8 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         Map::loadMap( "assets/Map.txt", 25, 20 );
 
         //Add player to the ECS manager.
-        player.addComponent< TransformComponent >( 384, 526 );
-        player.addComponent< SpriteComponent >( "assets/CDot.bmp" );
+        player.addComponent< TransformComponent >( 384, 526, 43, 43, 1 );
+        player.addComponent< SpriteComponent >( "assets/Player.bmp" );
         player.addComponent< KeyboardController >();
         player.addComponent< ColliderComponent >( "Player" );
         player.addComponent< StatsComponent >( 3 );
@@ -99,13 +99,13 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         heart3.addGroup( groupStatsObject );
 
         //Add gameover banner to the ECS manager.
-        gameOver.addComponent< TransformComponent >( 165, 290, 94, 16, 5 );
+        gameOver.addComponent< TransformComponent >( 135, 250, 106, 25, 5 );
         gameOver.addComponent< SpriteComponent >();
         gameOver.addGroup( groupStatsObject );
 
         //Add enemy to the ECS manager.
-        enemy.addComponent< TransformComponent >( 384, 15 );
-        enemy.addComponent< SpriteComponent >( "assets/WhiteCross.bmp" );
+        enemy.addComponent< TransformComponent >( 384, 15, 46, 45, 2 );
+        enemy.addComponent< SpriteComponent >( "assets/Enemy.bmp" );
         enemy.addComponent< ColliderComponent >( "Enemy" );
         enemy.addComponent< StatsComponent >( 10 );
         enemy.addGroup( groupEnemies );
@@ -160,6 +160,7 @@ void Game::update(){
     //Timer, recorded second by second.
     if( SDL_GetTicks() > 1000 * gameTime ){
         gameTime++;
+        std::cout << gameTime << std::endl;
         //Add cooldown to ensure that no overshooting in the same second.
         enemy.getComponent< StatsComponent >().skillCooldown = true;
         //Invincible time deducted.
@@ -167,43 +168,97 @@ void Game::update(){
             player.getComponent< StatsComponent >().invincibleTime--;
         }
         else{
-            player.getComponent< SpriteComponent >().setTexture( "assets/CDot.bmp" );
+            player.getComponent< SpriteComponent >().setTexture( "assets/Player.bmp" );
         }
     }
 
-    //Add enemy every 10 seconds.
-    if( gameTime % 2 == 0 && enemy.getComponent< StatsComponent >().skillCooldown == true ){
-        //Enemy set in cooldown
-        enemy.getComponent< StatsComponent >().skillCooldown = false;
-        //Add new bullets.
-        //Bullets increase while their speed decrease.
-        for( int i = 0; i < gameTime / 2; i++ ){
+    if( enemy.getComponent< StatsComponent >().skillCooldown == true ){
+        if( gameTime % 30 == 0 ){
+            //Enemy set in cooldown.
+            enemy.getComponent< StatsComponent >().skillCooldown = false;
             auto& bullet( manager.addEntity() );
             //Bullets are generated at enemy's position.
             bullet.addComponent< TransformComponent >
             ( enemy.getComponent< TransformComponent >().position.x,
-            enemy.getComponent< TransformComponent >().position.y, 10, 10, 2 );
-            bullet.addComponent< SpriteComponent >( "assets/Bullet.bmp" );
-            bullet.addComponent< ColliderComponent >( "SpreadEnemySummon" );
+            enemy.getComponent< TransformComponent >().position.y, 24, 22, 2 );
+            bullet.addComponent< SpriteComponent >( "assets/TrackingBullet.bmp" );
+            bullet.addComponent< ColliderComponent >( "TrackingEnemySummon" );
             bullet.addComponent< StatsComponent >( 5 );
             bullet.addGroup( groupEnemies );
-            //Calculating initial direction of bullets.
+            bullet.getComponent< TransformComponent >().velocity.x = 1;
+            bullet.getComponent< TransformComponent >().velocity.y = 1;
+            bullet.getComponent< TransformComponent >().speed = 2;
+        }
+        if( gameTime % 15 == 0 ){
+            //Enemy set in cooldown.
+            enemy.getComponent< StatsComponent >().skillCooldown = false;
+            auto& bullet( manager.addEntity() );
+            //Bullets are generated at enemy's position.
+            bullet.addComponent< TransformComponent >
+            ( enemy.getComponent< TransformComponent >().position.x,
+            enemy.getComponent< TransformComponent >().position.y, 64, 64, 1 );
+            bullet.addComponent< SpriteComponent >( "assets/ReboundBullet.bmp" );
+            bullet.addComponent< ColliderComponent >( "ReboundEnemySummon" );
+            bullet.addComponent< StatsComponent >( 5 );
+            bullet.addGroup( groupEnemies );
             Vector2D direction( 0, 0 );
-            if( ( gameTime / 2 ) % 2 == 1 ){
-                int bulletCnt = ( gameTime - 1 ) / 2;
-                direction.x = 50 * ( i - ( bulletCnt - 1 ) / 2 );
-                direction.y = 50 * bulletCnt;
-            }
-            else{
-                int bulletCnt = gameTime / 2;
-                direction.x = 50 * ( i - bulletCnt / 2 ); 
-                direction.y = 50 * bulletCnt;
-            } 
+            direction.x += (
+                player.getComponent< TransformComponent >().position.x
+                - enemy.getComponent< TransformComponent >().position.y
+            );
+            direction.y += (
+                player.getComponent< TransformComponent >().position.x
+                - enemy.getComponent< TransformComponent >().position.y
+            );
             direction.unitVector();
-            //Spread bullets in arc mode.
             bullet.getComponent< TransformComponent >().velocity.x = direction.x;
             bullet.getComponent< TransformComponent >().velocity.y = direction.y;
-            bullet.getComponent< TransformComponent >().speed = 3;
+            bullet.getComponent< TransformComponent >().speed = 5;
+        }
+        if( gameTime % 3 == 0 ){
+            //Enemy set in cooldown.
+            enemy.getComponent< StatsComponent >().skillCooldown = false;
+            //Add new bullets.
+            for( int i = 0; i < gameTime / 2; i++ ){
+                auto& bullet( manager.addEntity() );
+                //Bullets are generated at enemy's position.
+                bullet.addComponent< TransformComponent >
+                ( enemy.getComponent< TransformComponent >().position.x,
+                enemy.getComponent< TransformComponent >().position.y, 22, 22, 2 );
+                bullet.addComponent< SpriteComponent >( "assets/SpreadBullet.bmp" );
+                bullet.addComponent< ColliderComponent >( "SpreadEnemySummon" );
+                bullet.addComponent< StatsComponent >( 5 );
+                bullet.addGroup( groupEnemies );
+                //Calculating initial direction of bullets.
+                Vector2D direction( 0, 0 );
+                if( ( gameTime / 2 ) % 2 == 1 ){
+                    int bulletCnt = ( gameTime - 1 ) / 2;
+                    direction.x = 125 * ( i - ( bulletCnt - 1 ) / 2 );
+                    direction.y = 125 * bulletCnt;
+                }
+                else{
+                    int bulletCnt = gameTime / 2;
+                    direction.x = 125 * ( i - bulletCnt / 2 ); 
+                    direction.y = 125 * bulletCnt;
+                } 
+                direction.unitVector();
+                //Spread bullets in arc mode.
+                bullet.getComponent< TransformComponent >().velocity.x = direction.x;
+                bullet.getComponent< TransformComponent >().velocity.y = direction.y;
+                bullet.getComponent< TransformComponent >().speed = 3;
+            }
+        }
+    }
+
+    for( auto& e : enemies ){
+        if( e->getComponent< ColliderComponent >().tag == "TrackingEnemySummon" ){
+            Vector2D direction( 
+                player.getComponent< TransformComponent >().position.x - e->getComponent< TransformComponent >().position.x,
+                player.getComponent< TransformComponent >().position.y - e->getComponent< TransformComponent >().position.y
+            );
+            direction.unitVector();
+            e->getComponent< TransformComponent >().velocity.x = direction.x;
+            e->getComponent< TransformComponent >().velocity.y = direction.y;
         }
     }
 
@@ -229,12 +284,13 @@ void Game::update(){
                 player.getComponent< TransformComponent >().speed;
             }
             //Player hits enemy.
-            if( ( cc->tag == "Enemy" || cc->tag == "EnemySummon" ) &&
+            if( ( cc->tag == "Enemy" || cc->tag == "SpreadEnemySummon"
+                || cc->tag == "TrackingEnemySummon" || cc->tag == "ReboundEnemySummon" ) &&
                 player.getComponent< StatsComponent >().invincibleTime == 0 ){
                 //Player hit, damaged.
                 player.getComponent< StatsComponent >().healthPoint--;
                 player.getComponent< StatsComponent >().invincibleTime = 2;
-                player.getComponent< SpriteComponent >().setTexture( "assets/InvincibleCDot.bmp" );
+                player.getComponent< SpriteComponent >().setTexture( "assets/DamagedPlayer.bmp" );
                 //healthPoint deducted.
                 switch( player.getComponent< StatsComponent >().healthPoint ){
                     case 2:
@@ -259,10 +315,12 @@ void Game::update(){
         //Enemy collision.
         for( auto& e: enemies ){
             if( Collision::AABB( e->getComponent< ColliderComponent >(), *cc ) ){
-                if( cc->tag == "eWall" || cc->tag == "wWall" ){
+                if( ( cc->tag == "eWall" || cc->tag == "wWall" ) &&
+                    e->getComponent< ColliderComponent >().tag == "ReboundEnemySummon"  ){
                     e->getComponent< TransformComponent >().velocity.x *= -1;
                 }
-                if( cc->tag == "nWall" || cc->tag == "sWall" ){
+                if( ( cc->tag == "nWall" || cc->tag == "sWall" ) && 
+                    e->getComponent< ColliderComponent >().tag == "ReboundEnemySummon" ){
                     e->getComponent< TransformComponent >().velocity.y *= -1;
                 }
             }

@@ -23,7 +23,7 @@ class TileComponent : public Component
 
             switch( tileID ){
                 case 0:
-                    this->path = "assets/Water.bmp";
+                    this->path = "assets/Background_Pink.bmp";
                     break;
                 case 1:
                     this->path = "assets/Grass.bmp";
