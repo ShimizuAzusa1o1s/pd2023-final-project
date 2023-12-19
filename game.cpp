@@ -172,33 +172,38 @@ void Game::update(){
     }
 
     //Add enemy every 10 seconds.
-    if( gameTime % 10 == 0 && enemy.getComponent< StatsComponent >().skillCooldown == true ){
+    if( gameTime % 2 == 0 && enemy.getComponent< StatsComponent >().skillCooldown == true ){
         //Enemy set in cooldown
         enemy.getComponent< StatsComponent >().skillCooldown = false;
         //Add new bullets.
         //Bullets increase while their speed decrease.
-        for( int i = 0; i < gameTime / 5; i++ ){
+        for( int i = 0; i < gameTime / 2; i++ ){
             auto& bullet( manager.addEntity() );
             //Bullets are generated at enemy's position.
             bullet.addComponent< TransformComponent >
             ( enemy.getComponent< TransformComponent >().position.x,
             enemy.getComponent< TransformComponent >().position.y, 10, 10, 2 );
             bullet.addComponent< SpriteComponent >( "assets/Bullet.bmp" );
-            bullet.addComponent< ColliderComponent >( "EnemySummon" );
+            bullet.addComponent< ColliderComponent >( "SpreadEnemySummon" );
             bullet.addComponent< StatsComponent >( 5 );
             bullet.addGroup( groupEnemies );
             //Calculating initial direction of bullets.
-            Vector2D direction( 
-                player.getComponent< TransformComponent >().position.x - 
-                enemy.getComponent< TransformComponent >().position.x + 100 * ( i - static_cast<float>( ( gameTime - 5 ) / 10 ) ),
-                player.getComponent< TransformComponent >().position.y - 
-                enemy.getComponent< TransformComponent >().position.y
-            );
+            Vector2D direction( 0, 0 );
+            if( ( gameTime / 2 ) % 2 == 1 ){
+                int bulletCnt = ( gameTime - 1 ) / 2;
+                direction.x = 50 * ( i - ( bulletCnt - 1 ) / 2 );
+                direction.y = 50 * bulletCnt;
+            }
+            else{
+                int bulletCnt = gameTime / 2;
+                direction.x = 50 * ( i - bulletCnt / 2 ); 
+                direction.y = 50 * bulletCnt;
+            } 
             direction.unitVector();
             //Spread bullets in arc mode.
             bullet.getComponent< TransformComponent >().velocity.x = direction.x;
             bullet.getComponent< TransformComponent >().velocity.y = direction.y;
-            bullet.getComponent< TransformComponent >().speed = 5 - i / 2.5 ;
+            bullet.getComponent< TransformComponent >().speed = 3;
         }
     }
 
