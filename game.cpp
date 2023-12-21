@@ -160,7 +160,6 @@ void Game::update(){
     //Timer, recorded second by second.
     if( SDL_GetTicks() > 1000 * gameTime ){
         gameTime++;
-        std::cout << gameTime << std::endl;
         //Add cooldown to ensure that no overshooting in the same second.
         enemy.getComponent< StatsComponent >().skillCooldown = true;
         //Invincible time deducted.
@@ -169,6 +168,15 @@ void Game::update(){
         }
         else{
             player.getComponent< SpriteComponent >().setTexture( "assets/Player.bmp" );
+        }
+        //Victory after 50 seconds
+        if( gameTime == 50 ){
+            gameOver.getComponent< SpriteComponent >().setTexture( "assets/Victory.bmp" );
+            player.destroy();
+            for( auto& e : enemies ){
+                e->destroy();
+            }
+            isTagRunning = false;
         }
     }
 
@@ -187,7 +195,7 @@ void Game::update(){
             bullet.addGroup( groupEnemies );
             bullet.getComponent< TransformComponent >().velocity.x = 1;
             bullet.getComponent< TransformComponent >().velocity.y = 1;
-            bullet.getComponent< TransformComponent >().speed = 2;
+            bullet.getComponent< TransformComponent >().speed = 1.5;
         }
         if( gameTime % 15 == 0 ){
             //Enemy set in cooldown.
