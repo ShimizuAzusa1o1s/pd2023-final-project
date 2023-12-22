@@ -6,12 +6,15 @@
 class ColliderComponent : public Component
 {
     public:
+        //Member variables.
         SDL_Rect collider;
         std::string tag;
         TransformComponent* transform;
 
+        //Constructor.
         ColliderComponent( std::string t ){ this->tag = t; }
 
+        //Initialize the component.
         void init() override{
             if( !entity->hasComponent< TransformComponent >() ){
                 entity->addComponent< TransformComponent >();
@@ -21,6 +24,7 @@ class ColliderComponent : public Component
             Game::colliders.push_back( this );
         }
 
+        //Update the position of the collider.
         void update() override{
             this->collider.x = static_cast<int>( transform->position.x );
             this->collider.y = static_cast<int>( transform->position.y );

@@ -15,6 +15,7 @@ class KeyboardController : public Component
         }
 
         void update() override{
+            //If W-A-S-D is pressed, altering velocity.
             if( Game::event.type == SDL_KEYDOWN ){
                 switch( Game::event.key.keysym.scancode ){
                     case SDL_SCANCODE_W:
@@ -32,6 +33,8 @@ class KeyboardController : public Component
                     default:;
                 }
             }
+            //If W-A-S-D is released, altering velocity.
+            //In this system, the key that is preesed latter will be recorded.
             if( Game::event.type == SDL_KEYUP ){
                 switch( Game::event.key.keysym.scancode ){
                     case SDL_SCANCODE_W:

@@ -6,29 +6,26 @@
 class TransformComponent : public Component
 {
     public:
+        //Member variables.
+        //Set the upper-left corner (0,0), and use a vector to express the position.
         Vector2D position;
         Vector2D velocity;
-
         int height = 16;
         int width = 16;
         int scale = 2;
-
         float speed = 3;
-
+        //Constructors.
         TransformComponent(){
             this->position.zero();
         }
-
         TransformComponent( int sc ){
             this->position.zero();
             this->scale = sc;
         }
-        
         TransformComponent( float x, float y ){
             this->position.x = x;
             this->position.y = y;
         }
-
         TransformComponent( float x, float y, int w, int h, int sc ){
             this->position.x = x;
             this->position.y = y;
@@ -36,11 +33,11 @@ class TransformComponent : public Component
             this->height = h;
             this->scale = sc;
         }
-
+        //Initialize the component
         void init() override{
             this->velocity.zero();
         }
-
+        //Update the entity's position.
         void update() override{
             position.x += velocity.x * speed;
             position.y += velocity.y * speed;

@@ -10,7 +10,7 @@ class Game{
         bool isRunning; //Indicator of the game-running status.
         SDL_Window* window;
     public:
-        //Static member variables.
+        //Static member variables & functions.
         static void addTile( int id, int x, int y );
         static SDL_Renderer* renderer;
         static SDL_Event event;

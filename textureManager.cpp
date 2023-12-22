@@ -13,5 +13,6 @@ SDL_Texture* TextureManager::loadTexture( const char* filename){
 }
 
 void TextureManager::drawTexture( SDL_Texture* tex, SDL_Rect src, SDL_Rect dest ){
+    //Drawing the designated texture to the game screen.
     SDL_RenderCopy( Game::renderer, tex, &src, &dest );
 }

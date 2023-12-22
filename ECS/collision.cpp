@@ -1,6 +1,8 @@
 #include "collision.h"
 #include "colliderComponent.h"
 
+//By checking whether colliders overlapping each other,
+//we can determine whether two objects are colliding each other.
 bool Collision::AABB( const SDL_Rect& recA, const SDL_Rect& recB ){
     if( 
         recA.x + recA.w >= recB.x &&

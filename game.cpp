@@ -67,6 +67,9 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
 
         //Create game window.
         this->window = SDL_CreateWindow( title, xpos, ypos, width, height, flags );
+        //Set the window icon.
+        SDL_Surface* icon = SDL_LoadBMP( "assets/Player.bmp" );
+        SDL_SetWindowIcon( window, icon );
         if( window ) std::cout << "Window created!" << std::endl;
 
         //Create game renderer.
@@ -110,7 +113,7 @@ void Game::initialize( const char* title, int xpos, int ypos, int width, int hei
         enemy.addComponent< StatsComponent >( 10 );
         enemy.addGroup( groupEnemies );
 
-        //Add wall to the ECS manager.
+        //Add walls to the ECS manager.
         eastWall.addComponent< TransformComponent >( 790, 0, 10, 640, 1 );
         eastWall.addComponent< SpriteComponent >( "assets/VerticalWall.bmp" );
         eastWall.addComponent< ColliderComponent >( "eWall" );
@@ -169,9 +172,11 @@ void Game::update(){
         else{
             player.getComponent< SpriteComponent >().setTexture( "assets/Player.bmp" );
         }
-        //Victory after 50 seconds
+        //Victory after 50 seconds.
         if( gameTime == 50 ){
+            //Show victory banner.
             gameOver.getComponent< SpriteComponent >().setTexture( "assets/Victory.bmp" );
+            //Destroy all motivated objects.
             player.destroy();
             for( auto& e : enemies ){
                 e->destroy();
@@ -181,6 +186,7 @@ void Game::update(){
     }
 
     if( enemy.getComponent< StatsComponent >().skillCooldown == true ){
+        //Every 30 seconds, add a tracking bullet to the field.
         if( gameTime % 30 == 0 ){
             //Enemy set in cooldown.
             enemy.getComponent< StatsComponent >().skillCooldown = false;
@@ -193,10 +199,12 @@ void Game::update(){
             bullet.addComponent< ColliderComponent >( "TrackingEnemySummon" );
             bullet.addComponent< StatsComponent >( 5 );
             bullet.addGroup( groupEnemies );
+            //Set initial speed & direction.
             bullet.getComponent< TransformComponent >().velocity.x = 1;
             bullet.getComponent< TransformComponent >().velocity.y = 1;
             bullet.getComponent< TransformComponent >().speed = 1.5;
         }
+        //Every 15 seconds, add a rebounding bullet to the field.
         if( gameTime % 15 == 0 ){
             //Enemy set in cooldown.
             enemy.getComponent< StatsComponent >().skillCooldown = false;
@@ -209,6 +217,7 @@ void Game::update(){
             bullet.addComponent< ColliderComponent >( "ReboundEnemySummon" );
             bullet.addComponent< StatsComponent >( 5 );
             bullet.addGroup( groupEnemies );
+            //Bulid a vector pointing from enemy to player.
             Vector2D direction( 0, 0 );
             direction.x += (
                 player.getComponent< TransformComponent >().position.x
@@ -218,11 +227,14 @@ void Game::update(){
                 player.getComponent< TransformComponent >().position.x
                 - enemy.getComponent< TransformComponent >().position.y
             );
+            //Convert the vector into a unit vector.
             direction.unitVector();
+            //Set initial speed & direction.
             bullet.getComponent< TransformComponent >().velocity.x = direction.x;
             bullet.getComponent< TransformComponent >().velocity.y = direction.y;
             bullet.getComponent< TransformComponent >().speed = 5;
         }
+        //Every 3 seconds, add an arc-shaped bullet line to the field.
         if( gameTime % 3 == 0 ){
             //Enemy set in cooldown.
             enemy.getComponent< StatsComponent >().skillCooldown = false;
@@ -239,18 +251,19 @@ void Game::update(){
                 bullet.addGroup( groupEnemies );
                 //Calculating initial direction of bullets.
                 Vector2D direction( 0, 0 );
+                int bulletCnt = 0;
                 if( ( gameTime / 2 ) % 2 == 1 ){
-                    int bulletCnt = ( gameTime - 1 ) / 2;
+                    bulletCnt = ( gameTime - 1 ) / 2;
                     direction.x = 125 * ( i - ( bulletCnt - 1 ) / 2 );
-                    direction.y = 125 * bulletCnt;
                 }
                 else{
-                    int bulletCnt = gameTime / 2;
+                    bulletCnt = gameTime / 2;
                     direction.x = 125 * ( i - bulletCnt / 2 ); 
-                    direction.y = 125 * bulletCnt;
-                } 
+                }
+                direction.y = 125 * bulletCnt;
+                //Convert the vector into a unit vector.
                 direction.unitVector();
-                //Spread bullets in arc mode.
+                //Set initial speed & direction.
                 bullet.getComponent< TransformComponent >().velocity.x = direction.x;
                 bullet.getComponent< TransformComponent >().velocity.y = direction.y;
                 bullet.getComponent< TransformComponent >().speed = 3;
@@ -258,20 +271,24 @@ void Game::update(){
         }
     }
 
+    //In every game loop, adjusting tracking bullet's direction based on player's position.
     for( auto& e : enemies ){
         if( e->getComponent< ColliderComponent >().tag == "TrackingEnemySummon" ){
+            //Bulid a vector pointing from bullet to player.
             Vector2D direction( 
                 player.getComponent< TransformComponent >().position.x - e->getComponent< TransformComponent >().position.x,
                 player.getComponent< TransformComponent >().position.y - e->getComponent< TransformComponent >().position.y
             );
+            //Convert the vector into a unit vector.
             direction.unitVector();
             e->getComponent< TransformComponent >().velocity.x = direction.x;
             e->getComponent< TransformComponent >().velocity.y = direction.y;
         }
     }
 
-    //Wall rebound evaluation.
+    //Collision evaluation.
     for( auto cc : colliders ){
+        //Player collision.
         if( Collision::AABB( player.getComponent< ColliderComponent >(), *cc ) ){
             //Player hit vertical wall.
             if( cc->tag == "eWall" ){
@@ -291,15 +308,15 @@ void Game::update(){
                 player.getComponent< TransformComponent >().position.y -=
                 player.getComponent< TransformComponent >().speed;
             }
-            //Player hits enemy.
+            //Player hits enemy when not invincible.
             if( ( cc->tag == "Enemy" || cc->tag == "SpreadEnemySummon"
                 || cc->tag == "TrackingEnemySummon" || cc->tag == "ReboundEnemySummon" ) &&
                 player.getComponent< StatsComponent >().invincibleTime == 0 ){
-                //Player hit, damaged.
+                //Player's health point damaged.
                 player.getComponent< StatsComponent >().healthPoint--;
                 player.getComponent< StatsComponent >().invincibleTime = 2;
                 player.getComponent< SpriteComponent >().setTexture( "assets/DamagedPlayer.bmp" );
-                //healthPoint deducted.
+                //Switching texture.
                 switch( player.getComponent< StatsComponent >().healthPoint ){
                     case 2:
                         heart1.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
@@ -308,9 +325,10 @@ void Game::update(){
                         heart2.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
                         break;
                     case 0:
-                        //healthPoint is used up, gameover.
+                        //When player's health point is used up, gameover.
                         heart3.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
                         gameOver.getComponent< SpriteComponent >().setTexture( "assets/GameOver.bmp" );
+                        //Destroy all motivated game objects.
                         player.destroy();
                         for( auto& e : enemies ){
                             e->destroy();

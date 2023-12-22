@@ -20,7 +20,7 @@ int main( int argc, char* argv[] ){
     int frameTime = 0;
 
     //Initialize the game.
-    game->initialize( "Tag", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 900, 640, false );
+    game->initialize( "暈到咪咪冒冒小狗的下船大作戰！", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 900, 640, false );
     while( game->running() ){
         //Obtain the start of the this game loop.
         frameStart = SDL_GetTicks();

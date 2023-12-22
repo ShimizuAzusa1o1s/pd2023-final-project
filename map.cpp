@@ -3,7 +3,6 @@
 #include <fstream>
 
 //Below is a two-dimensional matrix containing map information.
-//0: water, 1: grass, 2: dirt.
 
 Map::Map(){
 

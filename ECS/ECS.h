@@ -16,7 +16,7 @@ class Manager;
 using ComponentID = std::size_t;
 using Group = std::size_t;
 
-//Distributing ID to the component(a pre-process for the I/O files)
+//Distributing ID to the component( a pre-process for the I/O files )
 //inline: This function's implementation can replace their command at which they're called.
 inline ComponentID getNewComponentTypeID(){
     static ComponentID lastID = 0u;
@@ -48,7 +48,7 @@ class Component
 {
     public:
         Entity* entity;
-        //Virtual function.
+        //Virtual function for child classes.
         virtual void init(){}
         virtual void update(){}
         virtual void draw(){}
@@ -68,31 +68,34 @@ class Entity
         ComponentBitSet componentBitSet;
         GroupBitSet groupBitset;
     public:
+        //Constructor.
         Entity( Manager& mManager ) : manager( mManager ){}
+        //Update every component in the entity.
         void update(){
             //auto: Let the compiler tell the given variable's type by itself.
             //Update all the components in the entity.  
             for( auto& c: components ) c->update();
         }
+        //Draw every component in the entity.
         void draw(){
             for( auto& c: components ) c->draw();
         }
+        //Getters.
         bool isActive(){ return this->active; }
+        //Destroy the entity.
         void destroy(){ this->active = false; }
-
+        //Check if the entity belongs to a certain group.
         bool hasGroup( Group mGroup ){
             return groupBitset[ mGroup ];
         }
-
+        //Add the entity to the group.
         void addGroup( Group mGroup );
-        
+        //Remove the entity from the group.
         void delGroup( Group mGroup ){ 
             groupBitset[ mGroup ] = false;
         }
-
         //Check if the entity has a certain component.
         template< typename T > bool hasComponent(){ return componentBitSet[ getComponentTypeID<T>() ]; }
-        
         //typename... TArgs: 
         //To tell the compiler that we have several arguments behind.
         //To put simply, the number of arguments are now flexible.
@@ -120,7 +123,6 @@ class Entity
             c->init();
             return *c;
         }
-
         //Obtaining the component's information.
         template <typename T> T& getComponent() const{
             auto ptr( this->componentArray[ getComponentTypeID<T>() ] );
@@ -128,6 +130,7 @@ class Entity
         }
 };
 
+//Manager contains entities.
 class Manager
 {
     private:
@@ -138,7 +141,6 @@ class Manager
         void update(){
             for( auto& e : this->entities ) e->update();
         }
-
         //Draw the entity on the window.
         void draw(){
             for( auto& e : this->entities ) e->draw();
@@ -158,7 +160,6 @@ class Manager
                     std::end(v)
                 );
             }
-
             this->entities.erase( 
                 std::remove_if( 
                     std::begin( entities ), 
@@ -168,15 +169,14 @@ class Manager
                 std::end( entities )
             );
         }
-
+        //Add an entity to the group.
         void addToGroup( Entity* mEntity, Group mGroup ){
             groupedEntities[ mGroup ].emplace_back( mEntity );
         }
-
+        //Get the whole vector of entity in the group.
         std::vector<Entity*>& getGroup( Group mGroup ){
             return groupedEntities[ mGroup ];
         }
-
         //Add entity to the manager.
         Entity& addEntity(){
             Entity* e = new Entity(*this);
