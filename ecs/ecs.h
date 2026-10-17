@@ -193,6 +193,13 @@ public:
         return grouped_entities[group];
     }
 
+    // Remove all entities. Call it before the renderer is destroyed,
+    // so that every texture is freed while the renderer still exists.
+    void clear() {
+        for (auto &group : grouped_entities) group.clear();
+        this->entities.clear();
+    }
+
     // Add an entity to the manager.
     Entity &add_entity() {
         Entity *e = new Entity(*this);

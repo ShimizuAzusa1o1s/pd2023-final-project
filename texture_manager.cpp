@@ -5,6 +5,10 @@ SDL_Texture *TextureManager::load_texture(const char *file_name) {
     // SDL_Surface is used in software rendering,
     // while SDL_Texture is used in hardware rendering.
     SDL_Surface *temp_image = SDL_LoadBMP(file_name);
+    if (temp_image == nullptr) {
+        std::cerr << "Cannot load " << file_name << ": " << SDL_GetError() << std::endl;
+        return nullptr;
+    }
     SDL_Texture *target_texture = SDL_CreateTextureFromSurface(Game::renderer, temp_image);
     // When the texture is created, free the surface.
     SDL_FreeSurface(temp_image);

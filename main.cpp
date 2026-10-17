@@ -8,6 +8,8 @@
 #include "ecs/collision.cpp"
 #include "ecs/ecs.cpp"
 
+#include <cstring>
+
 // Control the max frame rate.
 const int FPS = 60;
 const int FRAME_DELAY = 1000 / FPS;
@@ -16,6 +18,12 @@ const int FRAME_DELAY = 1000 / FPS;
 Game *game = nullptr;
 
 int main(int argc, char *argv[]) {
+    // Start in fullscreen mode with the "--fullscreen" option.
+    bool full_screen = false;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--fullscreen") == 0) full_screen = true;
+    }
+
     // Generate a new game.
     game = new Game();
     uint32_t frame_start = 0;
@@ -24,8 +32,8 @@ int main(int argc, char *argv[]) {
     // Initialize the game.
     game->initialize(
         "暈到咪咪冒冒小狗的下船大作戰！",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 900, 640,
-        false
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT,
+        full_screen
     );
     while (game->running()) {
         // Obtain the start time of this game loop.

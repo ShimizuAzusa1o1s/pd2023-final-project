@@ -5,10 +5,17 @@
 
 class ColliderComponent;
 
+// Logical size of the game screen in pixels. The field is 800 * 640,
+// and the right 100 pixels show the health points.
+// SDL scales this size to the window, also in fullscreen mode.
+const int SCREEN_WIDTH = 900;
+const int SCREEN_HEIGHT = 640;
+
 class Game {
 private:
     bool is_running; // Indicator of the game-running status.
     SDL_Window *window;
+    SDL_Texture *frame = nullptr; // One frame at the logical size, scaled to the window.
 
 public:
     // Static member variables and functions.
@@ -29,4 +36,5 @@ public:
     void render();
     void clean();
     bool running();
+    void toggle_full_screen();
 };

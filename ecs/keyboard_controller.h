@@ -14,10 +14,11 @@ public:
         transform = &entity->get_component<TransformComponent>();
     }
 
-    void update() override {
+    // Game::handle_events() calls this function once for each event.
+    void handle_event(const SDL_Event &event) {
         // If W-A-S-D is pressed, alter the velocity.
-        if (Game::event.type == SDL_KEYDOWN) {
-            switch (Game::event.key.keysym.scancode) {
+        if (event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.scancode) {
                 case SDL_SCANCODE_W:
                     transform->velocity.y = -1;
                     break;
@@ -35,8 +36,8 @@ public:
         }
         // If W-A-S-D is released, alter the velocity.
         // In this system, the key that is pressed later will be recorded.
-        if (Game::event.type == SDL_KEYUP) {
-            switch (Game::event.key.keysym.scancode) {
+        if (event.type == SDL_KEYUP) {
+            switch (event.key.keysym.scancode) {
                 case SDL_SCANCODE_W:
                 case SDL_SCANCODE_S:
                     transform->velocity.y = key_states[SDL_SCANCODE_S] - key_states[SDL_SCANCODE_W];

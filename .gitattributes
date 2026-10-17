@@ -1,2 +1,2 @@
-# The map loader expects LF line endings.
+# Keep the map file in LF line endings on every platform.
 assets/map.txt text eol=lf

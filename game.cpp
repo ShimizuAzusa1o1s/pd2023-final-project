@@ -55,12 +55,39 @@ auto &north_wall(manager.add_entity());
 auto &south_wall(manager.add_entity());
 auto &tiles(manager.get_group(GROUP_MAP));
 
+// Center point of an entity.
+Vector2D center_of(Entity &entity) {
+    TransformComponent &transform = entity.get_component<TransformComponent>();
+    return Vector2D(
+        transform.position.x + transform.width * transform.scale / 2.0f,
+        transform.position.y + transform.height * transform.scale / 2.0f
+    );
+}
+
+// Vector from the center of an entity to the center of the player.
+Vector2D direction_to_player(Entity &entity) {
+    Vector2D from = center_of(entity);
+    Vector2D to = center_of(player);
+    return Vector2D(to.x - from.x, to.y - from.y);
+}
+
+// Check if an entity is completely outside the screen.
+bool is_off_screen(Entity &entity) {
+    TransformComponent &transform = entity.get_component<TransformComponent>();
+    float width = transform.width * transform.scale;
+    float height = transform.height * transform.scale;
+    return transform.position.x + width < 0 || transform.position.x > SCREEN_WIDTH ||
+           transform.position.y + height < 0 || transform.position.y > SCREEN_HEIGHT;
+}
+
 Game::Game() {}
 
 // Initialize the elements of the game, such as the game window and the renderer.
 void Game::initialize(const char *title, int x_pos, int y_pos, int width, int height, bool full_screen) {
-    int flags = 0;
-    if (full_screen) flags = SDL_WINDOW_FULLSCREEN;
+    // FULLSCREEN_DESKTOP keeps the desktop resolution. The renderer scales the
+    // logical size to it (see below), so the game fills the screen.
+    Uint32 flags = 0;
+    if (full_screen) flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
 
     // If SDL cannot be initialized, stop.
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -74,12 +101,21 @@ void Game::initialize(const char *title, int x_pos, int y_pos, int width, int he
     // Set the window icon.
     SDL_Surface *icon = SDL_LoadBMP("assets/player.bmp");
     SDL_SetWindowIcon(window, icon);
+    SDL_FreeSurface(icon);
     if (window) std::cout << "Window created!" << std::endl;
 
     // Create the game renderer.
     this->renderer = SDL_CreateRenderer(window, -1, 0);
     if (renderer) {
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        // Draw at a fixed logical size. SDL scales it to the window size,
+        // keeps the aspect ratio, and centers it with black bars.
+        SDL_RenderSetLogicalSize(renderer, width, height);
+        // Draw each frame on a texture of the logical size, then scale the texture
+        // to the window as one image. Scaling each tile on its own leaves thin gaps
+        // between the tiles when the scale is not a whole number.
+        this->frame = SDL_CreateTexture(
+            renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, width, height
+        );
         std::cout << "Renderer created!" << std::endl;
     }
 
@@ -138,19 +174,35 @@ void Game::initialize(const char *title, int x_pos, int y_pos, int width, int he
     this->is_running = true;
 }
 
-// Handle the events that happen in the game.
+// Handle all the events that happened since the last frame.
 void Game::handle_events() {
-    // Obtain access to the given events.
-    SDL_PollEvent(&event);
-
-    // Operate the given events depending on their type.
-    switch (event.type) {
-        case SDL_QUIT:
-            this->is_running = false;
-            break;
-        default:
-            break;
+    while (SDL_PollEvent(&event)) {
+        // Operate the given event depending on its type.
+        switch (event.type) {
+            case SDL_QUIT:
+                this->is_running = false;
+                break;
+            case SDL_KEYDOWN:
+                // F11 switches between window and fullscreen.
+                if (event.key.keysym.scancode == SDL_SCANCODE_F11 && event.key.repeat == 0) {
+                    toggle_full_screen();
+                }
+                break;
+            default:
+                break;
+        }
+        // Send the event to the player's keyboard controller.
+        // After the game ends, the player entity no longer exists.
+        if (is_tag_running) {
+            player.get_component<KeyboardController>().handle_event(event);
+        }
     }
+}
+
+// Switch between window and fullscreen. The logical size keeps the scaling.
+void Game::toggle_full_screen() {
+    bool is_full_screen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
+    SDL_SetWindowFullscreen(window, is_full_screen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
 }
 
 // Update the elements of the game entities.
@@ -162,7 +214,7 @@ void Game::update() {
     if (!is_tag_running) return;
 
     // Timer, recorded second by second.
-    if (SDL_GetTicks() > 1000 * game_time) {
+    if (SDL_GetTicks() > static_cast<Uint32>(1000 * game_time)) {
         game_time++;
         // Add a cooldown to ensure that no skill fires twice in the same second.
         enemy.get_component<StatsComponent>().skill_cooldown = true;
@@ -221,16 +273,8 @@ void Game::update() {
             bullet.add_component<ColliderComponent>("ReboundEnemySummon");
             bullet.add_component<StatsComponent>(5);
             bullet.add_group(GROUP_ENEMIES);
-            // Build a vector pointing from the enemy to the player.
-            Vector2D direction(0, 0);
-            direction.x += (
-                player.get_component<TransformComponent>().position.x
-                - enemy.get_component<TransformComponent>().position.y
-            );
-            direction.y += (
-                player.get_component<TransformComponent>().position.x
-                - enemy.get_component<TransformComponent>().position.y
-            );
+            // Build a vector pointing from the bullet to the player.
+            Vector2D direction = direction_to_player(bullet);
             // Convert the vector into a unit vector.
             direction.unit_vector();
             // Set the initial speed and direction.
@@ -280,15 +324,18 @@ void Game::update() {
     for (auto &e : enemies) {
         if (e->get_component<ColliderComponent>().tag == "TrackingEnemySummon") {
             // Build a vector pointing from the bullet to the player.
-            Vector2D direction(
-                player.get_component<TransformComponent>().position.x - e->get_component<TransformComponent>().position.x,
-                player.get_component<TransformComponent>().position.y - e->get_component<TransformComponent>().position.y
-            );
+            Vector2D direction = direction_to_player(*e);
             // Convert the vector into a unit vector.
             direction.unit_vector();
             e->get_component<TransformComponent>().velocity.x = direction.x;
             e->get_component<TransformComponent>().velocity.y = direction.y;
         }
+    }
+
+    // Destroy the bullets that have left the screen.
+    // refresh() removes them at the start of the next frame.
+    for (auto &e : enemies) {
+        if (e != &enemy && is_off_screen(*e)) e->destroy();
     }
 
     // Collision evaluation.
@@ -365,7 +412,19 @@ void Game::update() {
 
 // Update the game screen in accordance with the game entities.
 void Game::render() {
-    SDL_RenderClear(renderer);
+    if (frame) {
+        // Draw on the frame texture. White is the background of the health points.
+        SDL_SetRenderTarget(renderer, frame);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderClear(renderer);
+    } else {
+        // Without a frame texture, draw on the window directly:
+        // black bars around the logical area, and white inside it.
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderFillRect(renderer, nullptr);
+    }
     for (auto &t : tiles) {
         t->draw();
     }
@@ -378,13 +437,23 @@ void Game::render() {
     for (auto &s : stats) {
         s->draw();
     }
+    if (frame) {
+        // Copy the frame to the window. The logical size scales it and adds black bars.
+        SDL_SetRenderTarget(renderer, nullptr);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, frame, nullptr, nullptr);
+    }
     SDL_RenderPresent(renderer);
 }
 
 // Clean the whole game when it is closed.
-// Destroy the renderer before its window. SDL_DestroyWindow also frees the
-// window's renderer, so the reverse order uses a freed pointer and crashes.
+// 1. Remove all entities, so that their textures are freed while the renderer exists.
+// 2. Destroy the renderer before its window. SDL_DestroyWindow also frees the
+//    window's renderer, so the reverse order uses a freed pointer and crashes.
 void Game::clean() {
+    manager.clear();
+    SDL_DestroyTexture(this->frame);
     SDL_DestroyRenderer(this->renderer);
     SDL_DestroyWindow(this->window);
     SDL_Quit();

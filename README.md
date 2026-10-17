@@ -33,12 +33,23 @@ mingw32-make run
 The SDL2 development files for MinGW are in `sdl2-mingw/`.
 `SDL2.dll` must stay next to `main.exe`.
 
+### Fullscreen
+
+Start the game in fullscreen mode with the `--fullscreen` option, or press F11 while the game runs.
+
+```bash
+make run ARGS=--fullscreen
+./main --fullscreen
+```
+
+The game draws a 900 × 640 frame and scales it to the screen. It keeps the aspect ratio and centers the frame with black bars.
+
 ### Makefile Targets
 
 | Target | Action |
 |---|---|
 | `make` | Build `main` (Linux) or `main.exe` (Windows). |
-| `make run` | Build if necessary, then start the game. |
+| `make run` | Build if necessary, then start the game. Pass options with `ARGS`. |
 | `make clean` | Delete the executable. |
 
 To use another SDL2 installation, set `SDL2_CFLAGS` and `SDL2_LIBS`:
@@ -52,6 +63,7 @@ make SDL2_CFLAGS="-I/opt/sdl2/include" SDL2_LIBS="-L/opt/sdl2/lib -lSDL2"
 | Item | Rule |
 |---|---|
 | Move | Hold W, A, S, or D. A released key gives control back to the opposite key if it is still held. |
+| Fullscreen | Press F11 to switch between window and fullscreen. |
 | Health | The player has 3 hearts. The hearts are on the right side of the window. |
 | Damage | A hit costs 1 heart. Then the player is invincible for 2 seconds and shows the damaged sprite. |
 | Victory | Survive until the timer reaches 50 seconds. |
@@ -62,10 +74,11 @@ The enemy stays at the top of the field. It uses three attacks.
 | Attack | Period | Bullet speed (px/frame) | Behavior |
 |---|---|---|---|
 | Spread | Every 3 s | 3 | A fan of $\lfloor t/2 \rfloor$ bullets at time $t$. The fan grows over time. |
-| Rebound | Every 15 s | 5 | One large bullet that bounces off the four walls. |
+| Rebound | Every 15 s | 5 | One large bullet that starts toward the player and bounces off the four walls. |
 | Tracking | Every 30 s | 1.5 | One bullet that turns toward the player in every frame. |
 
 When two periods meet (for example, at 15 s or 30 s), the attacks fire in the same frame.
+A bullet that leaves the screen is destroyed.
 
 ## How the Program Works
 
@@ -76,12 +89,12 @@ When two periods meet (for example, at 15 s or 30 s), the attacks fire in the sa
 ```mermaid
 flowchart TD
     A[game->initialize<br/>window, renderer, map, entities] --> B{game->running?}
-    B -- yes --> C[handle_events<br/>poll one SDL event]
+    B -- yes --> C[handle_events<br/>handle all queued SDL events]
     C --> D[update<br/>ECS update, timer, attacks, collisions]
-    D --> E[render<br/>map, player, enemies, HUD]
+    D --> E[render<br/>draw a 900 × 640 frame, scale it to the window]
     E --> F[SDL_Delay to cap at 60 FPS]
     F --> B
-    B -- no --> G[game->clean<br/>destroy renderer and window]
+    B -- no --> G[game->clean<br/>remove entities, destroy renderer and window]
 ```
 
 `Game::update()` does these steps in each frame:
@@ -91,7 +104,8 @@ flowchart TD
 3. Once per second, advance `game_time`, count down the invincible time, and check for victory.
 4. If the enemy's skill is ready, spawn the bullets of each attack whose period divides `game_time`.
 5. Turn each tracking bullet toward the player.
-6. Test every collider against the player and every enemy object with an AABB (axis-aligned bounding box) check. Push the player back from walls, apply damage, and bounce rebound bullets off walls.
+6. Destroy each bullet that is completely outside the screen. `refresh()` removes it in the next frame.
+7. Test every collider against the player and every enemy object with an AABB (axis-aligned bounding box) check. Push the player back from walls, apply damage, and bounce rebound bullets off walls.
 
 ### Entity Component System
 
@@ -135,8 +149,8 @@ classDiagram
 |---|---|
 | `TransformComponent` | Position, velocity, size, scale, and speed. Moves the entity by `velocity * speed` in each frame. |
 | `SpriteComponent` | Loads a BMP texture and draws it at the entity's position. |
-| `ColliderComponent` | A rectangle and a tag string, such as `"Player"` or `"eWall"`. Registers itself in `Game::colliders`. |
-| `KeyboardController` | Sets the player's velocity from W-A-S-D events. |
+| `ColliderComponent` | A rectangle and a tag string, such as `"Player"` or `"eWall"`. Adds itself to `Game::colliders`, and removes itself when it is destroyed. |
+| `KeyboardController` | Sets the player's velocity from W-A-S-D events. `Game::handle_events()` sends each event to it. |
 | `StatsComponent` | Health points, invincible time, and the enemy's skill cooldown. |
 | `TileComponent` | One 32 × 32 background tile of the map. |
 
@@ -151,7 +165,7 @@ The entities belong to these groups. `Game::render()` draws them in this order.
 
 ### Map
 
-`assets/map.txt` is a 25 × 20 grid of comma-separated tile IDs. Each ID is one digit. ID `0` is the pink background tile. Each tile is 32 × 32 pixels, so the map covers 800 × 640 pixels. The file must use LF line endings, because the loader reads exactly one separator after each digit.
+`assets/map.txt` is a 25 × 20 grid of comma-separated tile IDs. Each ID is one digit. ID `0` is the pink background tile. Each tile is 32 × 32 pixels, so the map covers 800 × 640 pixels. The loader treats every non-digit character as a separator, so LF and CRLF line endings both work. An unknown ID uses the background tile and prints a warning.
 
 ## Repository Layout
 
@@ -186,26 +200,34 @@ The third-party files keep their original names (`SDL2.dll`, `SDL_*.h`, `libSDL2
 - File names are lowercase snake case. Folder names are lowercase with `-`.
 - Each `{` is on the same line as its declaration, loop, or condition.
 
-## Known Issues
+## Change History
 
-The refactor kept the original game logic. These issues are still in the code.
+### Fixes for Building and Running
 
-| Issue | Location | Effect |
-|---|---|---|
-| The rebound bullet's aim uses `player.x - enemy.y` for both axes. | `Game::update()` | The rebound bullet always starts at 45°, not toward the player. |
-| A new bullet joins the collision test before its collider rectangle is set. | `Game::update()` | The test reads uninitialized values in the bullet's first frame. |
-| `SpriteComponent::set_texture()` does not free the old texture. | `ecs/sprite_component.h` | The player sprite is reset every second, so one texture leaks each second. |
-| `Game::handle_events()` polls only one event per frame. | `game.cpp` | Events queue up when several arrive in one frame. |
-| Bullets that leave the field are never destroyed. | `Game::update()` | The number of entities grows during the game. |
-| Only tile ID `0` has a texture. | `ecs/tile_component.h` | Another ID in `map.txt` leaves the texture path unset. |
-
-### Fixes in This Refactor
-
-Three changes were necessary to build and run the game. They do not change the game rules.
+These changes were necessary to build and run the game. They do not change the game rules.
 
 1. `ecs/transform_component.h` included `..\vector2D.h` with a backslash. Linux compilers do not accept it. The path now uses `/`.
 2. `Game::clean()` destroyed the window before the renderer. `SDL_DestroyWindow` also frees the renderer, so the game crashed on every exit. The renderer is now destroyed first.
 3. `Map::load_map()` called `atoi(&tile)` on a single `char`. This reads memory past the variable. The loader now uses `tile - '0'`, which gives the same ID.
+
+### Bug Fixes
+
+| Issue | Fix |
+|---|---|
+| In fullscreen mode, the game was not scaled. It stayed in the upper-left corner of the screen. | The window uses `SDL_WINDOW_FULLSCREEN_DESKTOP`, and the renderer has a logical size of 900 × 640. Each frame is drawn on a texture of this size and scaled to the screen as one image, so no gaps appear between tiles. |
+| The rebound bullet aimed with `player.x - enemy.y` on both axes, so it always started at 45°. | The bullet aims from its center to the center of the player. The tracking bullet uses the same center-to-center direction. |
+| A new bullet joined the collision test before its collider rectangle was set. | `ColliderComponent::init()` and `SpriteComponent::init()` set their rectangles at once. |
+| `SpriteComponent::set_texture()` did not free the old texture, so one texture leaked each second. | `set_texture()` frees the old texture first. |
+| `Game::handle_events()` handled only one event per frame. | It handles all queued events, and it sends each event to the player's `KeyboardController`. |
+| Bullets that left the field were never destroyed. | Bullets that are completely off screen are destroyed. Each `ColliderComponent` removes itself from `Game::colliders` when it is destroyed, so the collision test never uses a freed collider. |
+| Only tile ID `0` had a texture, and other IDs left the path unset. | An unknown ID uses the background tile and prints a warning. |
+
+These smaller problems were fixed at the same time:
+
+- The textures were destroyed after `SDL_Quit()`. `Game::clean()` now removes all entities first, while the renderer still exists.
+- `Vector2D::unit_vector()` divided by zero for a zero vector. A zero vector now stays zero.
+- `TextureManager::load_texture()` and `Map::load_map()` print an error when a file cannot be opened.
+- The window icon surface is freed after use.
 
 ## References
 

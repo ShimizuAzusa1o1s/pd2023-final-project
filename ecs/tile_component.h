@@ -22,11 +22,14 @@ public:
         this->tile_rect.h = height;
         this->tile_id = id;
         // Determine the texture by the ID number.
+        // An unknown ID uses the background texture.
         switch (tile_id) {
             case 0:
                 this->path = "assets/background_pink.bmp";
                 break;
             default:
+                std::cerr << "Unknown tile ID " << tile_id << ", the background is used." << std::endl;
+                this->path = "assets/background_pink.bmp";
                 break;
         }
     }

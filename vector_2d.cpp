@@ -10,11 +10,12 @@ Vector2D::Vector2D(float x, float y) {
     this->y = y;
 }
 
-// Scale the vector to length 1.
+// Scale the vector to length 1. A zero vector stays zero.
 void Vector2D::unit_vector() {
     double x_square = pow(this->x, 2);
     double y_square = pow(this->y, 2);
     double length = sqrt(x_square + y_square);
+    if (length == 0) return;
     this->x /= length;
     this->y /= length;
     return;

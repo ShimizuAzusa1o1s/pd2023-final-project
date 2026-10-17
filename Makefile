@@ -32,8 +32,9 @@ all: $(TARGET)
 $(TARGET): $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(SDL2_CFLAGS) -o $(TARGET) $(SOURCE) $(SDL2_LIBS)
 
+# Pass options with ARGS, for example: make run ARGS=--fullscreen
 run: $(TARGET)
-	$(RUN)
+	$(RUN) $(ARGS)
 
 clean:
 	$(REMOVE) $(TARGET)
