@@ -1,0 +1,2 @@
+# The map loader expects LF line endings.
+assets/map.txt text eol=lf
