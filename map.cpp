@@ -2,28 +2,24 @@
 #include "game.h"
 #include <fstream>
 
-//Below is a two-dimensional matrix containing map information.
+Map::Map() {}
 
-Map::Map(){
+Map::~Map() {}
 
-}
-
-Map::~Map(){
-    
-}
-
-void Map::loadMap( std::string path, int sizeX, int sizeY ){
+// Read a size_x * size_y grid of comma-separated tile IDs (one digit each),
+// and add one tile for each ID. Each tile is 32 * 32 pixels.
+void Map::load_map(std::string path, int size_x, int size_y) {
     char tile;
-    std::ifstream mapFile;
-    mapFile.open( path );
+    std::ifstream map_file;
+    map_file.open(path);
 
-    for( int j = 0; j < sizeY; j++ ){
-        for( int i = 0; i < sizeX; i++ ){
-            mapFile.get( tile );
-            Game::addTile( atoi(&tile), i * 32, j * 32 );
-            mapFile.ignore();
+    for (int j = 0; j < size_y; j++) {
+        for (int i = 0; i < size_x; i++) {
+            map_file.get(tile);
+            Game::add_tile(tile - '0', i * 32, j * 32);
+            map_file.ignore();
         }
     }
 
-    mapFile.close();
+    map_file.close();
 }

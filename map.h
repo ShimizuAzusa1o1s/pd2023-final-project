@@ -1,14 +1,12 @@
 #pragma once
 #include <string>
 
-class Map{
-    private:
-        
-    public:
-        //Constructor.
-        Map();
-        //Destructor.
-        ~Map();
-        //Static member variables & functions.
-        static void loadMap( std::string path, int sizeX, int sizeY );
+class Map {
+public:
+    // Constructor.
+    Map();
+    // Destructor.
+    ~Map();
+    // Static member functions.
+    static void load_map(std::string path, int size_x, int size_y);
 };

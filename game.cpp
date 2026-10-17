@@ -1,393 +1,404 @@
 #include "game.h"
-#include "textureManager.h"
+#include "texture_manager.h"
 #include "map.h"
-#include "ECS/components.h"
-#include "vector2D.h"
-#include "ECS/collision.h"
+#include "ecs/components.h"
+#include "vector_2d.h"
+#include "ecs/collision.h"
 
-//Map object declaration.
-Map* map;
+// Map object declaration.
+Map *map;
 
-//Texture manager declaration.
-SDL_Renderer* Game::renderer = nullptr;
+// Renderer declaration.
+SDL_Renderer *Game::renderer = nullptr;
 
-//Game event declaration.
+// Game event declaration.
 SDL_Event Game::event;
 
-//Colliders declaration.
-std::vector< ColliderComponent* > Game::colliders;
+// Colliders declaration.
+std::vector<ColliderComponent *> Game::colliders;
 
-//Game status indicator.
-bool isTagRunning = true;
-int gameTime = 0;
+// Game status indicators.
+bool is_tag_running = true;
+int game_time = 0;
 
-//Entity component system manager declaration.
+// Entity component system manager declaration.
 Manager manager;
 
-//Group labels declaration.
-enum groupLabels : std::size_t{
-    groupMap,
-    groupPlayers,
-    groupEnemies,
-    groupColliders,
-    groupStatsObject
+// Group labels declaration.
+enum GroupLabel : std::size_t {
+    GROUP_MAP,
+    GROUP_PLAYERS,
+    GROUP_ENEMIES,
+    GROUP_COLLIDERS,
+    GROUP_STATS_OBJECT
 };
 
-//Players declaration.
-auto& player( manager.addEntity() );
-auto& players( manager.getGroup( groupPlayers ) );
+// Players declaration.
+auto &player(manager.add_entity());
+auto &players(manager.get_group(GROUP_PLAYERS));
 
-//Enemies declaration.
-auto& enemy( manager.addEntity() );
-auto& enemies( manager.getGroup( groupEnemies ) );
+// Enemies declaration.
+auto &enemy(manager.add_entity());
+auto &enemies(manager.get_group(GROUP_ENEMIES));
 
-//Player status object declaration.
-auto& heart1( manager.addEntity() );
-auto& heart2( manager.addEntity() );
-auto& heart3( manager.addEntity() );
-auto& gameOver( manager.addEntity() );
-auto& stats( manager.getGroup( groupStatsObject ) );
+// Player status objects declaration.
+auto &heart1(manager.add_entity());
+auto &heart2(manager.add_entity());
+auto &heart3(manager.add_entity());
+auto &game_over(manager.add_entity());
+auto &stats(manager.get_group(GROUP_STATS_OBJECT));
 
-//Map objects declaration.
-auto& eastWall( manager.addEntity() );
-auto& westWall( manager.addEntity() );
-auto& northWall( manager.addEntity() );
-auto& southWall( manager.addEntity() );
-auto& tiles( manager.getGroup( groupMap ) );
+// Map objects declaration.
+auto &east_wall(manager.add_entity());
+auto &west_wall(manager.add_entity());
+auto &north_wall(manager.add_entity());
+auto &south_wall(manager.add_entity());
+auto &tiles(manager.get_group(GROUP_MAP));
 
-Game::Game(){}
+Game::Game() {}
 
-//Initialize elements composing of the game. e.g: Game window, renderer, etc.
-void Game::initialize( const char* title, int xpos, int ypos, int width, int height, bool fullScreen ){
+// Initialize the elements of the game, such as the game window and the renderer.
+void Game::initialize(const char *title, int x_pos, int y_pos, int width, int height, bool full_screen) {
     int flags = 0;
-    if( fullScreen ) flags = SDL_WINDOW_FULLSCREEN;
+    if (full_screen) flags = SDL_WINDOW_FULLSCREEN;
 
-    if( SDL_Init(SDL_INIT_EVERYTHING) == 0 ){ //Check if the game is initialized successfully.
-        std::cout << "Subsystem initialized!" << std::endl;
-
-        //Create game window.
-        this->window = SDL_CreateWindow( title, xpos, ypos, width, height, flags );
-        //Set the window icon.
-        SDL_Surface* icon = SDL_LoadBMP( "assets/Player.bmp" );
-        SDL_SetWindowIcon( window, icon );
-        if( window ) std::cout << "Window created!" << std::endl;
-
-        //Create game renderer.
-        this->renderer = SDL_CreateRenderer( window, -1, 0 );
-        if( renderer ){
-            SDL_SetRenderDrawColor( renderer, 255, 255, 255, 255 );
-            std::cout << "Renderer created!" << std::endl;
-        } 
-
-        //Generating game maps.
-        Map::loadMap( "assets/Map.txt", 25, 20 );
-
-        //Add player to the ECS manager.
-        player.addComponent< TransformComponent >( 384, 526, 43, 43, 1 );
-        player.addComponent< SpriteComponent >( "assets/Player.bmp" );
-        player.addComponent< KeyboardController >();
-        player.addComponent< ColliderComponent >( "Player" );
-        player.addComponent< StatsComponent >( 3 );
-        player.addGroup( groupPlayers );
-
-        //Add health point to the ECS manager.
-        heart1.addComponent< TransformComponent >( 830, 54 );
-        heart1.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
-        heart1.addGroup( groupStatsObject );
-        heart2.addComponent< TransformComponent >( 830, 108 );
-        heart2.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
-        heart2.addGroup( groupStatsObject );
-        heart3.addComponent< TransformComponent >( 830, 162 );
-        heart3.addComponent< SpriteComponent >( "assets/HealthPoint.bmp" );
-        heart3.addGroup( groupStatsObject );
-
-        //Add gameover banner to the ECS manager.
-        gameOver.addComponent< TransformComponent >( 135, 250, 106, 25, 5 );
-        gameOver.addComponent< SpriteComponent >();
-        gameOver.addGroup( groupStatsObject );
-
-        //Add enemy to the ECS manager.
-        enemy.addComponent< TransformComponent >( 384, 15, 46, 45, 2 );
-        enemy.addComponent< SpriteComponent >( "assets/Enemy.bmp" );
-        enemy.addComponent< ColliderComponent >( "Enemy" );
-        enemy.addComponent< StatsComponent >( 10 );
-        enemy.addGroup( groupEnemies );
-
-        //Add walls to the ECS manager.
-        eastWall.addComponent< TransformComponent >( 790, 0, 10, 640, 1 );
-        eastWall.addComponent< SpriteComponent >( "assets/VerticalWall.bmp" );
-        eastWall.addComponent< ColliderComponent >( "eWall" );
-        eastWall.addGroup( groupMap );
-        westWall.addComponent< TransformComponent >( 0, 0, 10, 640, 1 );
-        westWall.addComponent< SpriteComponent >( "assets/VerticalWall.bmp" );
-        westWall.addComponent< ColliderComponent >( "wWall" );
-        westWall.addGroup( groupMap );
-        northWall.addComponent< TransformComponent >( 0, 0, 800, 10, 1 );
-        northWall.addComponent< SpriteComponent >( "assets/HorizontalWall.bmp" );
-        northWall.addComponent< ColliderComponent >( "nWall" );
-        northWall.addGroup( groupMap );
-        southWall.addComponent< TransformComponent >( 0, 630, 800, 10, 1 );
-        southWall.addComponent< SpriteComponent >( "assets/HorizontalWall.bmp" );
-        southWall.addComponent< ColliderComponent >( "sWall" );
-        southWall.addGroup( groupMap );
-
-        this->isRunning = true;
+    // If SDL cannot be initialized, stop.
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+        this->is_running = false;
+        return;
     }
-    //If the game cannot be opened correctly, stop.
-    else this->isRunning = false;
+    std::cout << "Subsystem initialized!" << std::endl;
+
+    // Create the game window.
+    this->window = SDL_CreateWindow(title, x_pos, y_pos, width, height, flags);
+    // Set the window icon.
+    SDL_Surface *icon = SDL_LoadBMP("assets/player.bmp");
+    SDL_SetWindowIcon(window, icon);
+    if (window) std::cout << "Window created!" << std::endl;
+
+    // Create the game renderer.
+    this->renderer = SDL_CreateRenderer(window, -1, 0);
+    if (renderer) {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        std::cout << "Renderer created!" << std::endl;
+    }
+
+    // Generate the game map.
+    Map::load_map("assets/map.txt", 25, 20);
+
+    // Add the player to the ECS manager.
+    player.add_component<TransformComponent>(384, 526, 43, 43, 1);
+    player.add_component<SpriteComponent>("assets/player.bmp");
+    player.add_component<KeyboardController>();
+    player.add_component<ColliderComponent>("Player");
+    player.add_component<StatsComponent>(3);
+    player.add_group(GROUP_PLAYERS);
+
+    // Add the health points to the ECS manager.
+    heart1.add_component<TransformComponent>(830, 54);
+    heart1.add_component<SpriteComponent>("assets/health_point.bmp");
+    heart1.add_group(GROUP_STATS_OBJECT);
+    heart2.add_component<TransformComponent>(830, 108);
+    heart2.add_component<SpriteComponent>("assets/health_point.bmp");
+    heart2.add_group(GROUP_STATS_OBJECT);
+    heart3.add_component<TransformComponent>(830, 162);
+    heart3.add_component<SpriteComponent>("assets/health_point.bmp");
+    heart3.add_group(GROUP_STATS_OBJECT);
+
+    // Add the game-over banner to the ECS manager.
+    game_over.add_component<TransformComponent>(135, 250, 106, 25, 5);
+    game_over.add_component<SpriteComponent>();
+    game_over.add_group(GROUP_STATS_OBJECT);
+
+    // Add the enemy to the ECS manager.
+    enemy.add_component<TransformComponent>(384, 15, 46, 45, 2);
+    enemy.add_component<SpriteComponent>("assets/enemy.bmp");
+    enemy.add_component<ColliderComponent>("Enemy");
+    enemy.add_component<StatsComponent>(10);
+    enemy.add_group(GROUP_ENEMIES);
+
+    // Add the walls to the ECS manager.
+    east_wall.add_component<TransformComponent>(790, 0, 10, 640, 1);
+    east_wall.add_component<SpriteComponent>("assets/vertical_wall.bmp");
+    east_wall.add_component<ColliderComponent>("eWall");
+    east_wall.add_group(GROUP_MAP);
+    west_wall.add_component<TransformComponent>(0, 0, 10, 640, 1);
+    west_wall.add_component<SpriteComponent>("assets/vertical_wall.bmp");
+    west_wall.add_component<ColliderComponent>("wWall");
+    west_wall.add_group(GROUP_MAP);
+    north_wall.add_component<TransformComponent>(0, 0, 800, 10, 1);
+    north_wall.add_component<SpriteComponent>("assets/horizontal_wall.bmp");
+    north_wall.add_component<ColliderComponent>("nWall");
+    north_wall.add_group(GROUP_MAP);
+    south_wall.add_component<TransformComponent>(0, 630, 800, 10, 1);
+    south_wall.add_component<SpriteComponent>("assets/horizontal_wall.bmp");
+    south_wall.add_component<ColliderComponent>("sWall");
+    south_wall.add_group(GROUP_MAP);
+
+    this->is_running = true;
 }
 
-//Handling game events happening in the game.
-void Game::handleEvents(){
-    //Obtain access to the given events. 
-    SDL_PollEvent( &event );
+// Handle the events that happen in the game.
+void Game::handle_events() {
+    // Obtain access to the given events.
+    SDL_PollEvent(&event);
 
-    //Operating given events depending on its type.
-    switch( event.type ){
+    // Operate the given events depending on their type.
+    switch (event.type) {
         case SDL_QUIT:
-            this->isRunning = false;
+            this->is_running = false;
             break;
         default:
             break;
     }
 }
 
-//Update the elements of the game entities.
-void Game::update(){
-    //Update the status of game object.
+// Update the elements of the game entities.
+void Game::update() {
+    // Update the status of the game objects.
     manager.refresh();
     manager.update();
-    //Stop if the game had ended.
-    if( !isTagRunning ) return;
+    // Stop if the game has ended.
+    if (!is_tag_running) return;
 
-    //Timer, recorded second by second.
-    if( SDL_GetTicks() > 1000 * gameTime ){
-        gameTime++;
-        //Add cooldown to ensure that no overshooting in the same second.
-        enemy.getComponent< StatsComponent >().skillCooldown = true;
-        //Invincible time deducted.
-        if( player.getComponent< StatsComponent >().invincibleTime != 0 ){
-            player.getComponent< StatsComponent >().invincibleTime--;
+    // Timer, recorded second by second.
+    if (SDL_GetTicks() > 1000 * game_time) {
+        game_time++;
+        // Add a cooldown to ensure that no skill fires twice in the same second.
+        enemy.get_component<StatsComponent>().skill_cooldown = true;
+        // Deduct the invincible time.
+        if (player.get_component<StatsComponent>().invincible_time != 0) {
+            player.get_component<StatsComponent>().invincible_time--;
+        } else {
+            player.get_component<SpriteComponent>().set_texture("assets/player.bmp");
         }
-        else{
-            player.getComponent< SpriteComponent >().setTexture( "assets/Player.bmp" );
-        }
-        //Victory after 50 seconds.
-        if( gameTime == 50 ){
-            //Show victory banner.
-            gameOver.getComponent< SpriteComponent >().setTexture( "assets/Victory.bmp" );
-            //Destroy all motivated objects.
+        // Victory after 50 seconds.
+        if (game_time == 50) {
+            // Show the victory banner.
+            game_over.get_component<SpriteComponent>().set_texture("assets/victory.bmp");
+            // Destroy all moving objects.
             player.destroy();
-            for( auto& e : enemies ){
+            for (auto &e : enemies) {
                 e->destroy();
             }
-            isTagRunning = false;
+            is_tag_running = false;
         }
     }
 
-    if( enemy.getComponent< StatsComponent >().skillCooldown == true ){
-        //Every 30 seconds, add a tracking bullet to the field.
-        if( gameTime % 30 == 0 ){
-            //Enemy set in cooldown.
-            enemy.getComponent< StatsComponent >().skillCooldown = false;
-            auto& bullet( manager.addEntity() );
-            //Bullets are generated at enemy's position.
-            bullet.addComponent< TransformComponent >
-            ( enemy.getComponent< TransformComponent >().position.x,
-            enemy.getComponent< TransformComponent >().position.y, 24, 22, 2 );
-            bullet.addComponent< SpriteComponent >( "assets/TrackingBullet.bmp" );
-            bullet.addComponent< ColliderComponent >( "TrackingEnemySummon" );
-            bullet.addComponent< StatsComponent >( 5 );
-            bullet.addGroup( groupEnemies );
-            //Set initial speed & direction.
-            bullet.getComponent< TransformComponent >().velocity.x = 1;
-            bullet.getComponent< TransformComponent >().velocity.y = 1;
-            bullet.getComponent< TransformComponent >().speed = 1.5;
+    if (enemy.get_component<StatsComponent>().skill_cooldown == true) {
+        // Every 30 seconds, add a tracking bullet to the field.
+        if (game_time % 30 == 0) {
+            // Set the enemy in cooldown.
+            enemy.get_component<StatsComponent>().skill_cooldown = false;
+            auto &bullet(manager.add_entity());
+            // Bullets are generated at the enemy's position.
+            bullet.add_component<TransformComponent>(
+                enemy.get_component<TransformComponent>().position.x,
+                enemy.get_component<TransformComponent>().position.y,
+                24, 22, 2
+            );
+            bullet.add_component<SpriteComponent>("assets/tracking_bullet.bmp");
+            bullet.add_component<ColliderComponent>("TrackingEnemySummon");
+            bullet.add_component<StatsComponent>(5);
+            bullet.add_group(GROUP_ENEMIES);
+            // Set the initial speed and direction.
+            bullet.get_component<TransformComponent>().velocity.x = 1;
+            bullet.get_component<TransformComponent>().velocity.y = 1;
+            bullet.get_component<TransformComponent>().speed = 1.5;
         }
-        //Every 15 seconds, add a rebounding bullet to the field.
-        if( gameTime % 15 == 0 ){
-            //Enemy set in cooldown.
-            enemy.getComponent< StatsComponent >().skillCooldown = false;
-            auto& bullet( manager.addEntity() );
-            //Bullets are generated at enemy's position.
-            bullet.addComponent< TransformComponent >
-            ( enemy.getComponent< TransformComponent >().position.x,
-            enemy.getComponent< TransformComponent >().position.y, 64, 64, 1 );
-            bullet.addComponent< SpriteComponent >( "assets/ReboundBullet.bmp" );
-            bullet.addComponent< ColliderComponent >( "ReboundEnemySummon" );
-            bullet.addComponent< StatsComponent >( 5 );
-            bullet.addGroup( groupEnemies );
-            //Bulid a vector pointing from enemy to player.
-            Vector2D direction( 0, 0 );
+        // Every 15 seconds, add a rebounding bullet to the field.
+        if (game_time % 15 == 0) {
+            // Set the enemy in cooldown.
+            enemy.get_component<StatsComponent>().skill_cooldown = false;
+            auto &bullet(manager.add_entity());
+            // Bullets are generated at the enemy's position.
+            bullet.add_component<TransformComponent>(
+                enemy.get_component<TransformComponent>().position.x,
+                enemy.get_component<TransformComponent>().position.y,
+                64, 64, 1
+            );
+            bullet.add_component<SpriteComponent>("assets/rebound_bullet.bmp");
+            bullet.add_component<ColliderComponent>("ReboundEnemySummon");
+            bullet.add_component<StatsComponent>(5);
+            bullet.add_group(GROUP_ENEMIES);
+            // Build a vector pointing from the enemy to the player.
+            Vector2D direction(0, 0);
             direction.x += (
-                player.getComponent< TransformComponent >().position.x
-                - enemy.getComponent< TransformComponent >().position.y
+                player.get_component<TransformComponent>().position.x
+                - enemy.get_component<TransformComponent>().position.y
             );
             direction.y += (
-                player.getComponent< TransformComponent >().position.x
-                - enemy.getComponent< TransformComponent >().position.y
+                player.get_component<TransformComponent>().position.x
+                - enemy.get_component<TransformComponent>().position.y
             );
-            //Convert the vector into a unit vector.
-            direction.unitVector();
-            //Set initial speed & direction.
-            bullet.getComponent< TransformComponent >().velocity.x = direction.x;
-            bullet.getComponent< TransformComponent >().velocity.y = direction.y;
-            bullet.getComponent< TransformComponent >().speed = 5;
+            // Convert the vector into a unit vector.
+            direction.unit_vector();
+            // Set the initial speed and direction.
+            bullet.get_component<TransformComponent>().velocity.x = direction.x;
+            bullet.get_component<TransformComponent>().velocity.y = direction.y;
+            bullet.get_component<TransformComponent>().speed = 5;
         }
-        //Every 3 seconds, add an arc-shaped bullet line to the field.
-        if( gameTime % 3 == 0 ){
-            //Enemy set in cooldown.
-            enemy.getComponent< StatsComponent >().skillCooldown = false;
-            //Add new bullets.
-            for( int i = 0; i < gameTime / 2; i++ ){
-                auto& bullet( manager.addEntity() );
-                //Bullets are generated at enemy's position.
-                bullet.addComponent< TransformComponent >
-                ( enemy.getComponent< TransformComponent >().position.x,
-                enemy.getComponent< TransformComponent >().position.y, 22, 22, 2 );
-                bullet.addComponent< SpriteComponent >( "assets/SpreadBullet.bmp" );
-                bullet.addComponent< ColliderComponent >( "SpreadEnemySummon" );
-                bullet.addComponent< StatsComponent >( 5 );
-                bullet.addGroup( groupEnemies );
-                //Calculating initial direction of bullets.
-                Vector2D direction( 0, 0 );
-                int bulletCnt = 0;
-                if( ( gameTime / 2 ) % 2 == 1 ){
-                    bulletCnt = ( gameTime - 1 ) / 2;
-                    direction.x = 125 * ( i - ( bulletCnt - 1 ) / 2 );
+        // Every 3 seconds, add an arc-shaped bullet line to the field.
+        if (game_time % 3 == 0) {
+            // Set the enemy in cooldown.
+            enemy.get_component<StatsComponent>().skill_cooldown = false;
+            // Add new bullets.
+            for (int i = 0; i < game_time / 2; i++) {
+                auto &bullet(manager.add_entity());
+                // Bullets are generated at the enemy's position.
+                bullet.add_component<TransformComponent>(
+                    enemy.get_component<TransformComponent>().position.x,
+                    enemy.get_component<TransformComponent>().position.y,
+                    22, 22, 2
+                );
+                bullet.add_component<SpriteComponent>("assets/spread_bullet.bmp");
+                bullet.add_component<ColliderComponent>("SpreadEnemySummon");
+                bullet.add_component<StatsComponent>(5);
+                bullet.add_group(GROUP_ENEMIES);
+                // Calculate the initial direction of the bullets.
+                Vector2D direction(0, 0);
+                int bullet_count = 0;
+                if ((game_time / 2) % 2 == 1) {
+                    bullet_count = (game_time - 1) / 2;
+                    direction.x = 125 * (i - (bullet_count - 1) / 2);
+                } else {
+                    bullet_count = game_time / 2;
+                    direction.x = 125 * (i - bullet_count / 2);
                 }
-                else{
-                    bulletCnt = gameTime / 2;
-                    direction.x = 125 * ( i - bulletCnt / 2 ); 
-                }
-                direction.y = 125 * bulletCnt;
-                //Convert the vector into a unit vector.
-                direction.unitVector();
-                //Set initial speed & direction.
-                bullet.getComponent< TransformComponent >().velocity.x = direction.x;
-                bullet.getComponent< TransformComponent >().velocity.y = direction.y;
-                bullet.getComponent< TransformComponent >().speed = 3;
+                direction.y = 125 * bullet_count;
+                // Convert the vector into a unit vector.
+                direction.unit_vector();
+                // Set the initial speed and direction.
+                bullet.get_component<TransformComponent>().velocity.x = direction.x;
+                bullet.get_component<TransformComponent>().velocity.y = direction.y;
+                bullet.get_component<TransformComponent>().speed = 3;
             }
         }
     }
 
-    //In every game loop, adjusting tracking bullet's direction based on player's position.
-    for( auto& e : enemies ){
-        if( e->getComponent< ColliderComponent >().tag == "TrackingEnemySummon" ){
-            //Bulid a vector pointing from bullet to player.
-            Vector2D direction( 
-                player.getComponent< TransformComponent >().position.x - e->getComponent< TransformComponent >().position.x,
-                player.getComponent< TransformComponent >().position.y - e->getComponent< TransformComponent >().position.y
+    // In every game loop, adjust the tracking bullets' direction based on the player's position.
+    for (auto &e : enemies) {
+        if (e->get_component<ColliderComponent>().tag == "TrackingEnemySummon") {
+            // Build a vector pointing from the bullet to the player.
+            Vector2D direction(
+                player.get_component<TransformComponent>().position.x - e->get_component<TransformComponent>().position.x,
+                player.get_component<TransformComponent>().position.y - e->get_component<TransformComponent>().position.y
             );
-            //Convert the vector into a unit vector.
-            direction.unitVector();
-            e->getComponent< TransformComponent >().velocity.x = direction.x;
-            e->getComponent< TransformComponent >().velocity.y = direction.y;
+            // Convert the vector into a unit vector.
+            direction.unit_vector();
+            e->get_component<TransformComponent>().velocity.x = direction.x;
+            e->get_component<TransformComponent>().velocity.y = direction.y;
         }
     }
 
-    //Collision evaluation.
-    for( auto cc : colliders ){
-        //Player collision.
-        if( Collision::AABB( player.getComponent< ColliderComponent >(), *cc ) ){
-            //Player hit vertical wall.
-            if( cc->tag == "eWall" ){
-                player.getComponent< TransformComponent >().position.x -=
-                player.getComponent< TransformComponent >().speed;
+    // Collision evaluation.
+    for (auto cc : colliders) {
+        // Player collision.
+        if (Collision::aabb(player.get_component<ColliderComponent>(), *cc)) {
+            // The player hits a vertical wall.
+            if (cc->tag == "eWall") {
+                player.get_component<TransformComponent>().position.x -=
+                    player.get_component<TransformComponent>().speed;
+            } else if (cc->tag == "wWall") {
+                player.get_component<TransformComponent>().position.x +=
+                    player.get_component<TransformComponent>().speed;
             }
-            else if( cc->tag == "wWall" ){
-                player.getComponent< TransformComponent >().position.x +=
-                player.getComponent< TransformComponent >().speed;
+            // The player hits a horizontal wall.
+            if (cc->tag == "nWall") {
+                player.get_component<TransformComponent>().position.y +=
+                    player.get_component<TransformComponent>().speed;
+            } else if (cc->tag == "sWall") {
+                player.get_component<TransformComponent>().position.y -=
+                    player.get_component<TransformComponent>().speed;
             }
-            //Player hit horizontal wall.
-            if( cc->tag == "nWall" ){
-                player.getComponent< TransformComponent >().position.y +=
-                player.getComponent< TransformComponent >().speed;
-            }
-            else if( cc->tag == "sWall" ){
-                player.getComponent< TransformComponent >().position.y -=
-                player.getComponent< TransformComponent >().speed;
-            }
-            //Player hits enemy when not invincible.
-            if( ( cc->tag == "Enemy" || cc->tag == "SpreadEnemySummon"
-                || cc->tag == "TrackingEnemySummon" || cc->tag == "ReboundEnemySummon" ) &&
-                player.getComponent< StatsComponent >().invincibleTime == 0 ){
-                //Player's health point damaged.
-                player.getComponent< StatsComponent >().healthPoint--;
-                player.getComponent< StatsComponent >().invincibleTime = 2;
-                player.getComponent< SpriteComponent >().setTexture( "assets/DamagedPlayer.bmp" );
-                //Switching texture.
-                switch( player.getComponent< StatsComponent >().healthPoint ){
+            // The player hits an enemy when not invincible.
+            if (
+                (cc->tag == "Enemy" || cc->tag == "SpreadEnemySummon" ||
+                 cc->tag == "TrackingEnemySummon" || cc->tag == "ReboundEnemySummon") &&
+                player.get_component<StatsComponent>().invincible_time == 0
+            ) {
+                // The player's health point is damaged.
+                player.get_component<StatsComponent>().health_point--;
+                player.get_component<StatsComponent>().invincible_time = 2;
+                player.get_component<SpriteComponent>().set_texture("assets/damaged_player.bmp");
+                // Switch the texture.
+                switch (player.get_component<StatsComponent>().health_point) {
                     case 2:
-                        heart1.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
+                        heart1.get_component<SpriteComponent>().set_texture("assets/damaged_health_point.bmp");
                         break;
                     case 1:
-                        heart2.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
+                        heart2.get_component<SpriteComponent>().set_texture("assets/damaged_health_point.bmp");
                         break;
                     case 0:
-                        //When player's health point is used up, gameover.
-                        heart3.getComponent< SpriteComponent >().setTexture( "assets/DamagedHealthPoint.bmp" );
-                        gameOver.getComponent< SpriteComponent >().setTexture( "assets/GameOver.bmp" );
-                        //Destroy all motivated game objects.
+                        // When the player's health points are used up, the game is over.
+                        heart3.get_component<SpriteComponent>().set_texture("assets/damaged_health_point.bmp");
+                        game_over.get_component<SpriteComponent>().set_texture("assets/game_over.bmp");
+                        // Destroy all moving game objects.
                         player.destroy();
-                        for( auto& e : enemies ){
+                        for (auto &e : enemies) {
                             e->destroy();
                         }
-                        isTagRunning = false;
+                        is_tag_running = false;
                         break;
                 }
             }
         }
-        //Enemy collision.
-        for( auto& e: enemies ){
-            if( Collision::AABB( e->getComponent< ColliderComponent >(), *cc ) ){
-                if( ( cc->tag == "eWall" || cc->tag == "wWall" ) &&
-                    e->getComponent< ColliderComponent >().tag == "ReboundEnemySummon"  ){
-                    e->getComponent< TransformComponent >().velocity.x *= -1;
+        // Enemy collision.
+        for (auto &e : enemies) {
+            if (Collision::aabb(e->get_component<ColliderComponent>(), *cc)) {
+                if (
+                    (cc->tag == "eWall" || cc->tag == "wWall") &&
+                    e->get_component<ColliderComponent>().tag == "ReboundEnemySummon"
+                ) {
+                    e->get_component<TransformComponent>().velocity.x *= -1;
                 }
-                if( ( cc->tag == "nWall" || cc->tag == "sWall" ) && 
-                    e->getComponent< ColliderComponent >().tag == "ReboundEnemySummon" ){
-                    e->getComponent< TransformComponent >().velocity.y *= -1;
+                if (
+                    (cc->tag == "nWall" || cc->tag == "sWall") &&
+                    e->get_component<ColliderComponent>().tag == "ReboundEnemySummon"
+                ) {
+                    e->get_component<TransformComponent>().velocity.y *= -1;
                 }
             }
         }
     }
 }
 
-//Update the game screen in accordance with the game entities.
-void Game::render(){
-    SDL_RenderClear( renderer );
-    for( auto& t : tiles ){
+// Update the game screen in accordance with the game entities.
+void Game::render() {
+    SDL_RenderClear(renderer);
+    for (auto &t : tiles) {
         t->draw();
     }
-    for( auto& p : players ){
+    for (auto &p : players) {
         p->draw();
     }
-    for( auto& e : enemies ){
+    for (auto &e : enemies) {
         e->draw();
     }
-    for( auto& s : stats ){
+    for (auto &s : stats) {
         s->draw();
     }
-    SDL_RenderPresent( renderer );
+    SDL_RenderPresent(renderer);
 }
 
-//Clean the whole game when it's closed.
-void Game::clean(){
-    SDL_DestroyWindow( this->window );
-    SDL_DestroyRenderer( this->renderer );
+// Clean the whole game when it is closed.
+// Destroy the renderer before its window. SDL_DestroyWindow also frees the
+// window's renderer, so the reverse order uses a freed pointer and crashes.
+void Game::clean() {
+    SDL_DestroyRenderer(this->renderer);
+    SDL_DestroyWindow(this->window);
     SDL_Quit();
     std::cout << "Game cleaned!" << std::endl;
 }
 
-//Check if the game is going to keep running in the whole game loop.
-bool Game::running(){
-    return this->isRunning; 
+// Check if the game keeps running in the game loop.
+bool Game::running() {
+    return this->is_running;
 }
 
-//Add map tiles.
-void Game::addTile( int id, int x, int y ){
-    auto& tile( manager.addEntity() );
-    tile.addComponent< TileComponent >( x, y, 32, 32, id );
-    tile.addGroup( groupMap );
+// Add a map tile.
+void Game::add_tile(int id, int x, int y) {
+    auto &tile(manager.add_entity());
+    tile.add_component<TileComponent>(x, y, 32, 32, id);
+    tile.add_group(GROUP_MAP);
 }
